@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nuestro Hogar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --bg:#FAFAF6;
+    --surface:#FFFFFF;
+    --ink:#1E231F;
+    --ink-soft:#636E67;
+    --line:#E4E2D9;
+
+    --pine:#2D5A4A;
+    --pine-light:#E7EFEA;
+
+    --gastos:#B8901F;
+    --gastos-light:#FBF3E1;
+    --autos:#3B6EA5;
+    --autos-light:#E9F0F8;
+    --docs:#7A5195;
+    --docs-light:#F1E9F5;
+    --salud:#C24E4E;
+    --salud-light:#FAECEC;
+    --hogar:#8B6F47;
+    --hogar-light:#F3EDE2;
+
+    --mariana:#C24E4E;
+    --luijo:#3B6EA5;
+
+    --danger:#C0392B;
+    --warn:#B8901F;
+    --ok:#2D5A4A;
+
+    --radius:14px;
+    --shadow: 0 1px 2px rgba(30,35,31,0.06), 0 4px 16px rgba(30,35,31,0.05);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.display{font-family:'Fraunces',serif;}
+  button{font-family:inherit;}
+
+  #app{display:flex; min-height:100vh;}
+
+  /* Sidebar */
+  #sidebar{
+    width:220px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--line);
+    padding:24px 14px; display:flex; flex-direction:column; gap:4px;
+  }
+  .brand{font-family:'Fraunces',serif; font-size:22px; font-weight:600; color:var(--pine); padding:4px 10px 10px 10px; line-height:1.2;}
+  .brand small{display:block; font-family:'Inter',sans-serif; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-top:4px;}
+  .account-box{padding:0 10px 18px 10px; border-bottom:1px solid var(--line); margin-bottom:14px;}
+  #auth-user-email{font-size:12px; font-weight:700; color:var(--ink); margin-bottom:4px; word-break:break-all;}
+  .navbtn{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:none;
+    background:transparent; color:var(--ink-soft); font-size:14.5px; font-weight:600; cursor:pointer; text-align:left;
+    transition:background .15s, color .15s;
+  }
+  .navbtn svg{width:18px; height:18px; flex-shrink:0;}
+  .navbtn:hover{background:var(--pine-light); color:var(--pine);}
+  .navbtn.active{background:var(--pine); color:#fff;}
+
+  main{flex:1; padding:32px 40px 100px 40px; max-width:920px;}
+  .section{display:none;}
+  .section.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  .page-head{margin-bottom:24px;}
+  .page-head h1{font-size:28px; margin:0 0 4px 0; font-weight:600;}
+  .page-head p{margin:0; color:var(--ink-soft); font-size:14.5px;}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px;}
+  .grid{display:grid; gap:16px;}
+  .grid-2{grid-template-columns:1fr 1fr;}
+  @media (max-width:700px){ .grid-2{grid-template-columns:1fr;} }
+
+  /* Dashboard tiles */
+  .tiles{display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px; margin-bottom:28px;}
+  .tile{border-radius:var(--radius); padding:18px; cursor:pointer; border:1px solid var(--line); transition:transform .15s;}
+  .tile:hover{transform:translateY(-2px);}
+  .tile .tile-label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; opacity:.75;}
+  .tile .tile-value{font-family:'Fraunces',serif; font-size:26px; font-weight:600; margin-top:6px;}
+  .tile.gastos{background:var(--gastos-light); color:var(--gastos);}
+  .tile.autos{background:var(--autos-light); color:var(--autos);}
+  .tile.docs{background:var(--docs-light); color:var(--docs);}
+  .tile.salud{background:var(--salud-light); color:var(--salud);}
+  .tile.hogar{background:var(--hogar-light); color:var(--hogar);}
+
+  .alert-box{border-radius:var(--radius); border:1px solid var(--line); background:var(--surface); margin-bottom:14px; overflow:hidden;}
+  .alert-head{padding:14px 18px; font-weight:700; font-size:14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:8px;}
+  .alert-row{padding:12px 18px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); font-size:14px;}
+  .alert-row:last-child{border-bottom:none;}
+  .pill{font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:99px; white-space:nowrap;}
+  .pill.overdue{background:#FBEAE8; color:var(--danger);}
+  .pill.soon{background:#FBF3E1; color:var(--warn);}
+  .empty-note{padding:14px 18px; color:var(--ink-soft); font-size:14px;}
+
+  /* Forms */
+  .form{display:grid; gap:12px; margin-bottom:24px;}
+  .form-row{display:grid; gap:12px; grid-template-columns:1fr 1fr;}
+  @media (max-width:600px){.form-row{grid-template-columns:1fr;}}
+  label{font-size:12.5px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:5px;}
+  input, select, textarea{
+    width:100%; padding:9px 11px; border-radius:9px; border:1px solid var(--line); background:#fff;
+    font-family:'Inter',sans-serif; font-size:14px; color:var(--ink);
+  }
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--pine); outline-offset:1px; border-color:var(--pine);}
+  textarea{resize:vertical; min-height:44px;}
+  .btn{
+    padding:10px 16px; border-radius:9px; border:none; background:var(--pine); color:#fff; font-weight:600;
+    font-size:14px; cursor:pointer; justify-self:start; transition:opacity .15s;
+  }
+  .btn:hover{opacity:.9;}
+  .btn.secondary{background:transparent; color:var(--ink-soft); border:1px solid var(--line);}
+  .btn:disabled{opacity:.6; cursor:default;}
+
+  /* List items */
+  .item{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start;}
+  .item-main{flex:1; min-width:0;}
+  .item-title{font-weight:700; font-size:14.5px;}
+  .item-sub{color:var(--ink-soft); font-size:13px; margin-top:2px;}
+  .item-meta{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  .tag{font-size:11.5px; font-weight:600; padding:3px 8px; border-radius:6px; background:var(--bg); border:1px solid var(--line); color:var(--ink-soft);}
+  .del-btn{background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:18px; line-height:1; padding:4px 6px; border-radius:6px;}
+  .del-btn:hover{background:#FBEAE8; color:var(--danger);}
+  .amount{font-family:'Fraunces',serif; font-weight:600; font-size:16px; white-space:nowrap;}
+
+  .tabbar{display:flex; gap:6px; margin-bottom:18px; border-bottom:1px solid var(--line);}
+  .tabbtn{padding:9px 4px; margin-right:18px; background:none; border:none; font-weight:600; font-size:14px; color:var(--ink-soft); cursor:pointer; border-bottom:2px solid transparent;}
+  .tabbtn.active{color:var(--pine); border-bottom-color:var(--pine);}
+
+  .search-box{margin-bottom:16px;}
+  .month-total{font-family:'Fraunces',serif; font-size:22px; font-weight:600; color:var(--pine); margin-bottom:2px;}
+  .catbar-row{display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
+  .catbar-label{width:110px; flex-shrink:0; color:var(--ink-soft);}
+  .catbar-track{flex:1; background:var(--bg); border-radius:6px; height:8px; overflow:hidden;}
+  .catbar-fill{height:100%; background:var(--gastos); border-radius:6px;}
+  .catbar-amt{width:70px; text-align:right; flex-shrink:0; font-weight:600;}
+
+  .empty-state{text-align:center; padding:36px 20px; color:var(--ink-soft);}
+  .empty-state .display{font-size:18px; color:var(--ink); margin-bottom:6px;}
+
+  /* Auth / lock-style card (reused) */
+  #auth-screen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .lock-wrap{max-width:380px; width:100%; text-align:center;}
+  .lock-icon{width:52px; height:52px; margin:0 auto 18px auto; color:var(--pine);}
+  .lock-wrap h2{font-size:22px; margin:0 0 6px 0;}
+  .lock-wrap p{color:var(--ink-soft); font-size:14px; margin:0 0 22px 0;}
+  .lock-card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:24px; text-align:left;}
+  .lock-error{color:var(--danger); font-size:13px; font-weight:600; margin-top:10px; min-height:16px;}
+  .lock-setup-person{border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:12px;}
+  .lock-setup-person label{margin-top:8px;}
+  .lock-setup-person label:first-child{margin-top:0;}
+  .lock-link{background:none; border:none; color:var(--ink-soft); font-size:12.5px; text-decoration:underline; cursor:pointer; margin-top:16px; display:inline-block;}
+  .lock-link:hover{color:var(--pine);}
+
+  /* Calendar */
+  .cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:11.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  .cal-cell{aspect-ratio:1; border-radius:10px; border:1px solid var(--line); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; position:relative; background:var(--bg); font-size:13px; font-weight:600; transition:background .15s;}
+  .cal-cell:hover{background:var(--pine-light);}
+  .cal-cell.empty{visibility:hidden; cursor:default;}
+  .cal-cell.today{border-color:var(--pine); border-width:2px;}
+  .cal-dots{display:flex; gap:3px;}
+  .cal-dot{width:8px; height:8px; border-radius:50%; background:var(--line);}
+  .cal-dot.mariana.on{background:var(--mariana);}
+  .cal-dot.luijo.on{background:var(--luijo);}
+  .cal-note-dot{position:absolute; top:5px; right:6px; width:6px; height:6px; border-radius:50%; background:var(--pine);}
+  .cal-legend-dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px; vertical-align:middle;}
+  .cal-legend-dot.mariana{background:var(--mariana);}
+  .cal-legend-dot.luijo{background:var(--luijo);}
+  @media (max-width:480px){ .cal-cell{font-size:11.5px;} }
+
+  /* Mobile bottom nav */
+  #bottomnav{display:none;}
+  @media (max-width:820px){
+    #sidebar{display:none;}
+    main{padding:20px 16px 90px 16px;}
+    #bottomnav{
+      display:flex; position:fixed; bottom:0; left:0; right:0; background:var(--surface);
+      border-top:1px solid var(--line); justify-content:space-around; padding:8px 4px calc(8px + env(safe-area-inset-bottom)) 4px; z-index:10;
+    }
+    .bn-btn{background:none; border:none; display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--ink-soft); font-size:10px; font-weight:600; cursor:pointer; padding:4px 6px;}
+    .bn-btn svg{width:20px; height:20px;}
+    .bn-btn.active{color:var(--pine);}
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="lock-wrap">
+    <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>
+    <h2 id="auth-title">Inicia sesión</h2>
+    <p>Nuestro Hogar — acceso privado para Mariana y Luijo.</p>
+    <div class="lock-card">
+      <label>Correo</label><input type="email" id="auth-email" placeholder="tu@correo.com">
+      <label style="margin-top:10px;">Contraseña</label><input type="password" id="auth-password" placeholder="••••••••">
+      <button class="btn" id="auth-submit-btn" style="width:100%; margin-top:16px;" type="button">Entrar</button>
+      <div class="lock-error" id="auth-error"></div>
+    </div>
+    <button class="lock-link" id="auth-toggle" type="button">¿No tienes cuenta? Crear una</button>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <aside id="sidebar">
+    <div class="brand">Nuestro Hogar<small>Panel familiar</small></div>
+    <div class="account-box">
+      <div id="auth-user-email"></div>
+      <button class="lock-link" id="logout-btn" type="button" style="margin:0;">Cerrar sesión</button>
+    </div>
+    <button class="navbtn" data-nav="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Inicio</button>
+    <button class="navbtn" data-nav="gastos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.5 1.3-2.5 3-2.5s3 1 3 2.3-1 1.9-3 2.2-3 .9-3 2.2 1.3 2.3 3 2.3 3-1 3-2.5"/></svg>Gastos</button>
+    <button class="navbtn" data-nav="autos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v-3l2-5a2 2 0 0 1 2-1h8a2 2 0 0 1 2 1l2 5v3"/><rect x="2" y="16" width="20" height="4" rx="1"/><circle cx="7" cy="18" r="1.3"/><circle cx="17" cy="18" r="1.3"/></svg>Autos</button>
+    <button class="navbtn" data-nav="documentos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v5h5"/><path d="M9 13h6M9 16.5h6"/></svg>Documentos</button>
+    <button class="navbtn" data-nav="salud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20s-7-4.3-9.5-9C1 7.5 3 4 6.5 4c2 0 3.3 1.2 4 2.2C11.2 5.2 12.5 4 14.5 4 18 4 20 7.5 18.5 11c-1.5 4.7-6.5 9-6.5 9z"/></svg>Salud</button>
+    <button class="navbtn" data-nav="hogar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-7 9 7"/><path d="M5 9v10h14V9"/><path d="M9 19v-6h6v6"/></svg>Hogar</button>
+  </aside>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section class="section active" id="sec-dashboard">
+      <div class="page-head"><h1>Hola de nuevo 👋</h1><p id="today-str"></p></div>
+
+      <div class="tiles">
+        <div class="tile gastos" data-nav="gastos"><div class="tile-label">Gastado este mes</div><div class="tile-value" id="tile-gastos">$0</div></div>
+        <div class="tile autos" data-nav="autos"><div class="tile-label">Autos registrados</div><div class="tile-value" id="tile-autos">0</div></div>
+        <div class="tile docs" data-nav="documentos"><div class="tile-label">Documentos</div><div class="tile-value" id="tile-docs">0</div></div>
+        <div class="tile salud" data-nav="salud"><div class="tile-label">Ejercicio esta semana</div><div class="tile-value" id="tile-salud">0</div></div>
+        <div class="tile hogar" data-nav="hogar"><div class="tile-label">Cosas en inventario</div><div class="tile-value" id="tile-hogar">0</div></div>
+      </div>
+
+      <div class="alert-box">
+        <div class="alert-head">🚗 Autos — próximos vencimientos</div>
+        <div id="alerts-autos"></div>
+      </div>
+      <div class="alert-box">
+        <div class="alert-head">📄 Documentos — próximos vencimientos</div>
+        <div id="alerts-docs"></div>
+      </div>
+
+      <div class="card">
+        <div class="tile-label" style="margin-bottom:6px;">¿Vienes de la versión anterior?</div>
+        <p style="margin:0 0 12px 0; color:var(--ink-soft); font-size:13.5px;">Importa una sola vez los datos que ya habían capturado. Esto solo funciona mientras la app sigue abierta aquí en Claude (antes de moverla a GitHub Pages).</p>
+        <button class="btn secondary" type="button" id="migrate-btn">Importar datos anteriores</button>
+      </div>
+    </section>
+
+    <!-- GASTOS -->
+    <section class="section" id="sec-gastos">
+      <div class="page-head"><h1>Gastos</h1><p>Registro de gastos compartidos.</p></div>
+      <div class="grid grid-2" style="margin-bottom:22px;">
+        <div class="card">
+          <div class="tile-label" style="color:var(--gastos);">Total este mes</div>
+          <div class="month-total" id="gastos-month-total">$0.00</div>
+        </div>
+        <div class="card" id="gastos-catbreak"></div>
+      </div>
+      <form class="form card" id="form-gastos" style="margin-bottom:22px;">
+        <div class="form-row">
+          <div><label>Fecha</label><input type="date" id="g-fecha" required></div>
+          <div><label>Categoría</label>
+            <select id="g-categoria">
+              <option>Comida</option><option>Transporte</option><option>Hogar</option>
+              <option>Salud</option><option>Entretenimiento</option><option>Autos</option><option>Otros</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej. Supermercado" required></div>
+          <div><label>Monto (MXN)</label><input type="number" step="0.01" id="g-monto" placeholder="0.00" required></div>
+        </div>
+        <div><label>¿Quién pagó? (opcional)</label><input type="text" id="g-quien" placeholder="Ej. Mariana"></div>
+        <button class="btn" type="submit">Agregar gasto</button>
+      </form>
+      <div id="list-gastos"></div>
+    </section>
+
+    <!-- AUTOS -->
+    <section class="section" id="sec-autos">
+      <div class="page-head"><h1>Autos</h1><p>Mantenimiento, verificación y seguro de cada auto.</p></div>
+      <form class="form card" id="form-autos" style="margin-bottom:22px;">
+        <div class="form-row">
+          <div><label>Nombre del auto</label><input type="text" id="a-nombre" placeholder="Ej. Auto de Luijo" required></div>
+          <div><label>Placas</label><input type="text" id="a-placas" placeholder="Ej. ABC-123"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Próximo cambio de aceite</label><input type="date" id="a-aceite"></div>
+          <div><label>Próxima verificación</label><input type="date" id="a-verif"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Vencimiento del seguro</label><input type="date" id="a-seguro"></div>
+          <div><label>Kilometraje actual (opcional)</label><input type="text" id="a-km" placeholder="Ej. 45,000 km"></div>
+        </div>
+        <div><label>Notas</label><textarea id="a-notas" placeholder="Ej. Taller de confianza, llantas, etc."></textarea></div>
+        <button class="btn" type="submit">Agregar auto</button>
+      </form>
+      <div id="list-autos"></div>
+    </section>
+
+    <!-- DOCUMENTOS -->
+    <section class="section" id="sec-documentos">
+      <div class="page-head"><h1>Documentos</h1><p>Fechas de vencimiento de pasaportes, identificaciones y más.</p></div>
+      <div class="card" id="familia-card" style="margin-bottom:22px;">
+        <div class="tile-label" style="color:var(--docs); margin-bottom:10px;">Integrantes de la familia</div>
+        <div id="familia-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+        <div class="form-row" style="grid-template-columns:1fr 1fr auto;">
+          <input type="text" id="familia-nueva" placeholder="Nombre completo">
+          <input type="text" id="familia-apodo" placeholder="Apodo (opcional)">
+          <button class="btn" type="button" id="familia-add-btn">Agregar</button>
+        </div>
+      </div>
+      <form class="form card" id="form-docs" style="margin-bottom:22px;">
+        <div class="form-row">
+          <div><label>Nombre del documento</label><input type="text" id="d-nombre" placeholder="Ej. Pasaporte" required></div>
+          <div><label>Persona</label>
+            <select id="d-persona"></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div><label>Tipo</label>
+            <select id="d-tipo">
+              <option>Pasaporte</option><option>Identificación / INE</option><option>Licencia de conducir</option>
+              <option>Visa</option><option>Seguro médico</option><option>Póliza de seguro</option><option>Otro</option>
+            </select>
+          </div>
+          <div><label>Fecha de vencimiento</label><input type="date" id="d-fecha" required></div>
+        </div>
+        <div><label>Notas</label><input type="text" id="d-notas" placeholder="Ej. Renovar en línea"></div>
+        <button class="btn" type="submit">Agregar documento</button>
+      </form>
+      <div class="tabbar" id="docs-person-filter" style="flex-wrap:wrap; row-gap:6px;"></div>
+      <div id="list-docs"></div>
+    </section>
+
+    <!-- SALUD -->
+    <section class="section" id="sec-salud">
+      <div class="page-head"><h1>Salud</h1><p>Ejercicio y alimentación.</p></div>
+      <div class="tabbar">
+        <button class="tabbtn active" data-tab="calendario">Calendario</button>
+        <button class="tabbtn" data-tab="ejercicio">Historial</button>
+        <button class="tabbtn" data-tab="alimentacion">Alimentación</button>
+      </div>
+
+      <div id="tab-calendario">
+        <div class="card" style="margin-bottom:16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+            <button class="btn secondary" id="cal-prev" type="button" style="padding:6px 12px;">←</button>
+            <div class="display" id="cal-month-label" style="font-size:19px; font-weight:600; text-transform:capitalize;"></div>
+            <button class="btn secondary" id="cal-next" type="button" style="padding:6px 12px;">→</button>
+          </div>
+          <div class="cal-weekdays">
+            <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+          <div style="display:flex; gap:16px; margin-top:14px; font-size:12.5px; color:var(--ink-soft); flex-wrap:wrap;">
+            <span><span class="cal-legend-dot mariana"></span> Mariana</span>
+            <span><span class="cal-legend-dot luijo"></span> Luijo</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-ejercicio" style="display:none;">
+        <form class="form card" id="form-ejercicio" style="margin-bottom:22px;">
+          <div class="form-row">
+            <div><label>Fecha</label><input type="date" id="e-fecha" required></div>
+            <div><label>Actividad</label><input type="text" id="e-tipo" placeholder="Ej. Gimnasio, correr, yoga" required></div>
+          </div>
+          <div class="form-row">
+            <div><label>Duración (min)</label><input type="number" id="e-duracion" placeholder="45"></div>
+            <div><label>¿Quién? (opcional)</label><input type="text" id="e-quien" placeholder="Ej. Mariana"></div>
+          </div>
+          <div><label>Notas</label><textarea id="e-notas" placeholder="Ej. Piernas y espalda"></textarea></div>
+          <button class="btn" type="submit">Agregar entrenamiento</button>
+        </form>
+        <div id="list-ejercicio"></div>
+      </div>
+
+      <div id="tab-alimentacion" style="display:none;">
+        <form class="form card" id="form-alimentacion" style="margin-bottom:22px;">
+          <div class="form-row">
+            <div><label>Fecha</label><input type="date" id="al-fecha" required></div>
+            <div><label>Comida</label>
+              <select id="al-tipo"><option>Desayuno</option><option>Comida</option><option>Cena</option><option>Snack</option></select>
+            </div>
+          </div>
+          <div><label>Descripción</label><input type="text" id="al-desc" placeholder="Ej. Pollo con verduras" required></div>
+          <div><label>Notas</label><textarea id="al-notas" placeholder="Opcional"></textarea></div>
+          <button class="btn" type="submit">Agregar comida</button>
+        </form>
+        <div id="list-alimentacion"></div>
+      </div>
+    </section>
+
+    <!-- Modal for calendar day -->
+    <div id="cal-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(30,35,31,0.4); z-index:50; align-items:center; justify-content:center; padding:20px;">
+      <div class="card" style="max-width:360px; width:100%;">
+        <div class="display" id="cal-modal-date" style="font-size:18px; font-weight:600; margin-bottom:14px;"></div>
+
+        <div class="lock-setup-person" style="border-left:3px solid var(--mariana);">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:0;">
+            <input type="checkbox" id="cal-modal-done-mariana" style="width:18px; height:18px;"> Mariana hizo ejercicio
+          </label>
+          <label>Nota corta</label>
+          <textarea id="cal-modal-nota-mariana" placeholder="Ej. 30 min de cardio" maxlength="60" style="min-height:44px;"></textarea>
+        </div>
+
+        <div class="lock-setup-person" style="border-left:3px solid var(--luijo);">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:0;">
+            <input type="checkbox" id="cal-modal-done-luijo" style="width:18px; height:18px;"> Luijo hizo ejercicio
+          </label>
+          <label>Nota corta</label>
+          <textarea id="cal-modal-nota-luijo" placeholder="Ej. Pierna en el gym" maxlength="60" style="min-height:44px;"></textarea>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <button class="btn" id="cal-modal-save" type="button" style="flex:1;">Guardar</button>
+          <button class="btn secondary" id="cal-modal-cancel" type="button">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOGAR -->
+    <section class="section" id="sec-hogar">
+      <div class="page-head"><h1>Hogar</h1><p>¿Dónde están guardadas las cosas? Busca y encuentra todo.</p></div>
+      <input type="text" class="search-box" id="h-search" placeholder="Buscar... ej. 'ropa niño', 'campamento'">
+      <form class="form card" id="form-hogar" style="margin-bottom:22px;">
+        <div class="form-row">
+          <div><label>Contenedor / lugar</label><input type="text" id="h-nombre" placeholder="Ej. Maleta negra" required></div>
+          <div><label>¿Dónde está guardado?</label><input type="text" id="h-ubicacion" placeholder="Ej. Clóset del pasillo"></div>
+        </div>
+        <div><label>¿Qué contiene?</label><textarea id="h-contenido" placeholder="Ej. Ropa de niño de 3 años" required></textarea></div>
+        <div><label>Notas (opcional)</label><input type="text" id="h-notas" placeholder="Ej. Revisar cada temporada"></div>
+        <button class="btn" type="submit">Agregar al inventario</button>
+      </form>
+      <div id="list-hogar"></div>
+    </section>
+  </main>
+
+  <nav id="bottomnav">
+    <button class="bn-btn" data-nav="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Inicio</button>
+    <button class="bn-btn" data-nav="gastos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.5 1.3-2.5 3-2.5s3 1 3 2.3-1 1.9-3 2.2-3 .9-3 2.2 1.3 2.3 3 2.3 3-1 3-2.5"/></svg>Gastos</button>
+    <button class="bn-btn" data-nav="autos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v-3l2-5a2 2 0 0 1 2-1h8a2 2 0 0 1 2 1l2 5v3"/><rect x="2" y="16" width="20" height="4" rx="1"/><circle cx="7" cy="18" r="1.3"/><circle cx="17" cy="18" r="1.3"/></svg>Autos</button>
+    <button class="bn-btn" data-nav="documentos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M14 2v5h5"/></svg>Docs</button>
+    <button class="bn-btn" data-nav="salud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20s-7-4.3-9.5-9C1 7.5 3 4 6.5 4c2 0 3.3 1.2 4 2.2C11.2 5.2 12.5 4 14.5 4 18 4 20 7.5 18.5 11c-1.5 4.7-6.5 9-6.5 9z"/></svg>Salud</button>
+    <button class="bn-btn" data-nav="hogar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-7 9 7"/><path d="M5 9v10h14V9"/></svg>Hogar</button>
+  </nav>
+</div>
+
+<script>
+/* ---------- SUPABASE ---------- */
+const SUPABASE_URL = 'https://rbsqmyqyakhzjopgfksf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_xo9LfMciZa2wYjshqp2zxA_axX9G4WG';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ---------- HELPERS ---------- */
+const todayStr = document.getElementById('today-str');
+const today = new Date(); today.setHours(0,0,0,0);
+todayStr.textContent = today.toLocaleDateString('es-MX', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+const fmt = n => '$' + (Number(n)||0).toLocaleString('es-MX', {minimumFractionDigits:2, maximumFractionDigits:2});
+const daysUntil = dateStr => { if(!dateStr) return null; const d = new Date(dateStr+'T00:00:00'); return Math.round((d-today)/86400000); };
+const parseDateLocal = s => new Date(s+'T00:00:00');
+const pad2 = n => String(n).padStart(2,'0');
+// dd/mm/aaaa en toda la app
+const fmtDate = s => { const d = parseDateLocal(s); return pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+d.getFullYear(); };
+const dateKey = (y,m,d) => `${y}-${pad2(m+1)}-${pad2(d)}`;
+
+function escapeHtml(s){
+  return (s||'').toString().replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function emptyState(msg){ return `<div class="empty-state"><div class="display">Nada por aquí todavía</div><div>${msg}</div></div>`; }
+
+let DATA = { gastos:[], autos:[], documentos:[], ejercicio:[], alimentacion:[], hogar:[], familia:[], ejercicioCal:{} };
+
+/* ---------- AUTENTICACIÓN ---------- */
+let authMode = 'login';
+document.getElementById('auth-toggle').addEventListener('click', ()=>{
+  authMode = authMode==='login' ? 'signup' : 'login';
+  document.getElementById('auth-title').textContent = authMode==='login' ? 'Inicia sesión' : 'Crea tu cuenta';
+  document.getElementById('auth-submit-btn').textContent = authMode==='login' ? 'Entrar' : 'Crear cuenta';
+  document.getElementById('auth-toggle').textContent = authMode==='login' ? '¿No tienes cuenta? Crear una' : '¿Ya tienes cuenta? Inicia sesión';
+  document.getElementById('auth-error').textContent = '';
+});
+
+document.getElementById('auth-submit-btn').addEventListener('click', async ()=>{
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  const btn = document.getElementById('auth-submit-btn');
+  errEl.textContent = '';
+  if(!email || !password){ errEl.textContent = 'Completa correo y contraseña.'; return; }
+  if(password.length < 6){ errEl.textContent = 'La contraseña debe tener al menos 6 caracteres.'; return; }
+  btn.disabled = true;
+  let result;
+  if(authMode==='login'){
+    result = await sb.auth.signInWithPassword({email, password});
+  } else {
+    result = await sb.auth.signUp({email, password});
+  }
+  btn.disabled = false;
+  if(result.error){ errEl.textContent = result.error.message; return; }
+  if(authMode==='signup' && !result.data.session){
+    errEl.textContent = 'Cuenta creada. Revisa tu correo para confirmarla, o intenta iniciar sesión.';
+    return;
+  }
+  await showApp();
+});
+
+document.getElementById('logout-btn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  showAuth();
+});
+
+function showAuth(){
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+async function showApp(){
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  const { data:{ session } } = await sb.auth.getSession();
+  document.getElementById('auth-user-email').textContent = session?.user?.email || '';
+  await loadAll();
+}
+async function checkSession(){
+  const { data } = await sb.auth.getSession();
+  if(data.session){ await showApp(); } else { showAuth(); }
+}
+
+/* ---------- CARGA / GUARDADO (SUPABASE) ---------- */
+async function fetchTable(table, orderCol){
+  const { data, error } = await sb.from(table).select('*').order(orderCol || 'fecha', { ascending:false });
+  if(error){ console.error('Error cargando', table, error); return []; }
+  return data || [];
+}
+
+async function loadAll(){
+  const [gastos, autos, documentos, ejercicio, alimentacion, hogar, familia, cal] = await Promise.all([
+    fetchTable('gastos','fecha'),
+    fetchTable('autos','created_at'),
+    fetchTable('documentos','fecha'),
+    fetchTable('ejercicio','fecha'),
+    fetchTable('alimentacion','fecha'),
+    fetchTable('hogar','created_at'),
+    fetchTable('familia','created_at'),
+    fetchTable('ejercicio_calendario','fecha')
+  ]);
+  DATA.gastos = gastos;
+  DATA.autos = autos;
+  DATA.documentos = documentos;
+  DATA.ejercicio = ejercicio;
+  DATA.alimentacion = alimentacion;
+  DATA.hogar = hogar;
+  DATA.familia = familia;
+  DATA.ejercicioCal = {};
+  cal.forEach(row=>{
+    DATA.ejercicioCal[row.fecha] = {
+      mariana: { done: row.mariana_done, nota: row.mariana_nota || '' },
+      luijo: { done: row.luijo_done, nota: row.luijo_nota || '' }
+    };
+  });
+
+  if(DATA.familia.length===0){
+    const seed = [
+      ['Mariana Alejandra Saavedra Diaz','Mariana'], ['Luis Jose Alvarez Phelan','Luijo'],
+      ['Juan Pablo Alvarez Saavedra','Juanpi'], ['Mauro Alvarez Saavedra','Mauro'],
+      ['Maria Alejandra Diaz Segovia','Ga']
+    ].map(([nombre_completo,apodo])=>({nombre_completo,apodo}));
+    const { data, error } = await sb.from('familia').insert(seed).select();
+    if(!error) DATA.familia = data;
+  }
+
+  renderAll();
+}
+
+function renderAll(){
+  renderFamilia(); renderGastos(); renderAutos(); renderDocs(); renderEjercicio(); renderAlimentacion(); renderHogar(); renderDashboard(); renderCalendar();
+}
+
+/* ---------- MIGRACIÓN DESDE LA VERSIÓN ANTERIOR ---------- */
+document.getElementById('migrate-btn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('migrate-btn');
+  if(typeof window.storage === 'undefined'){
+    alert('Esta función solo funciona mientras la app sigue abierta aquí en Claude (antes de moverla a GitHub Pages). No encontré datos anteriores en este navegador.');
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Importando...';
+  try{
+    let count = 0;
+    const get = async k => { try{ const r = await window.storage.get(k, true); return r && r.value ? JSON.parse(r.value) : null; }catch(e){ return null; } };
+
+    const oldGastos = await get('gastos-data');
+    if(oldGastos && oldGastos.length){
+      const rows = oldGastos.map(g=>({fecha:g.fecha, categoria:g.categoria, descripcion:g.desc, monto:g.monto, quien:g.quien||null}));
+      await sb.from('gastos').insert(rows); count += rows.length;
+    }
+    const oldAutos = await get('autos-data');
+    if(oldAutos && oldAutos.length){
+      const rows = oldAutos.map(a=>({nombre:a.nombre, placas:a.placas||null, aceite:a.aceite||null, verificacion:a.verif||null, seguro:a.seguro||null, km:a.km||null, notas:a.notas||null}));
+      await sb.from('autos').insert(rows); count += rows.length;
+    }
+    const oldDocs = await get('documentos-data');
+    if(oldDocs && oldDocs.length){
+      const rows = oldDocs.map(d=>({nombre:d.nombre, tipo:d.tipo, persona:d.persona||null, fecha:d.fecha, notas:d.notas||null}));
+      await sb.from('documentos').insert(rows); count += rows.length;
+    }
+    const oldEj = await get('ejercicio-data');
+    if(oldEj && oldEj.length){
+      const rows = oldEj.map(x=>({fecha:x.fecha, tipo:x.tipo, duracion:x.duracion?parseInt(x.duracion):null, quien:x.quien||null, notas:x.notas||null}));
+      await sb.from('ejercicio').insert(rows); count += rows.length;
+    }
+    const oldAl = await get('alimentacion-data');
+    if(oldAl && oldAl.length){
+      const rows = oldAl.map(x=>({fecha:x.fecha, tipo:x.tipo, descripcion:x.desc, notas:x.notas||null}));
+      await sb.from('alimentacion').insert(rows); count += rows.length;
+    }
+    const oldHogar = await get('hogar-data');
+    if(oldHogar && oldHogar.length){
+      const rows = oldHogar.map(x=>({nombre:x.nombre, ubicacion:x.ubicacion||null, contenido:x.contenido, notas:x.notas||null}));
+      await sb.from('hogar').insert(rows); count += rows.length;
+    }
+    const oldFam = await get('familia-data');
+    if(oldFam && oldFam.length){
+      for(const f of oldFam){
+        await sb.from('familia').update({apodo:f.nickname}).eq('nombre_completo', f.name);
+      }
+    }
+    const oldCal = await get('ejercicio-calendario-data');
+    if(oldCal && Object.keys(oldCal).length){
+      const rows = Object.entries(oldCal).map(([fecha,v])=>({
+        fecha,
+        mariana_done: !!(v.mariana && v.mariana.done), mariana_nota: (v.mariana && v.mariana.nota) || null,
+        luijo_done: !!(v.luijo && v.luijo.done), luijo_nota: (v.luijo && v.luijo.nota) || null
+      }));
+      await sb.from('ejercicio_calendario').upsert(rows, { onConflict:'fecha' });
+      count += rows.length;
+    }
+    await loadAll();
+    alert('¡Listo! Se importaron ' + count + ' registros.');
+  }catch(err){
+    console.error(err);
+    alert('Hubo un error al importar: ' + err.message);
+  }
+  btn.disabled = false; btn.textContent = 'Importar datos anteriores';
+});
+
+/* ---------- NAV ---------- */
+function goTo(section){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+section).classList.add('active');
+  document.querySelectorAll('.navbtn, .bn-btn').forEach(b=>b.classList.toggle('active', b.dataset.nav===section));
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('[data-nav]').forEach(el=>el.addEventListener('click', ()=>goTo(el.dataset.nav)));
+
+const SALUD_TABS = ['calendario','ejercicio','alimentacion'];
+document.querySelectorAll('.tabbar .tabbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tabbar .tabbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    SALUD_TABS.forEach(t=> document.getElementById('tab-'+t).style.display = (btn.dataset.tab===t) ? 'block':'none');
+  });
+});
+
+/* ---------- FAMILIA ---------- */
+let docsFilterPerson = 'Todos';
+
+document.getElementById('familia-add-btn').addEventListener('click', addFamilyMember);
+document.getElementById('familia-nueva').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addFamilyMember(); } });
+document.getElementById('familia-apodo').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addFamilyMember(); } });
+
+async function addFamilyMember(){
+  const input = document.getElementById('familia-nueva');
+  const apodoInput = document.getElementById('familia-apodo');
+  const nombre_completo = input.value.trim();
+  if(!nombre_completo) return;
+  const apodo = apodoInput.value.trim() || nombre_completo.split(' ')[0];
+  const { data, error } = await sb.from('familia').insert({nombre_completo, apodo}).select();
+  if(error){ alert('Error al agregar: ' + error.message); return; }
+  DATA.familia.push(data[0]);
+  input.value = ''; apodoInput.value = '';
+  renderFamilia(); renderDocs();
+}
+
+window.removeFamilyMember = async function(id){
+  if(!confirm('¿Quitar a esta persona? Los documentos que ya le asignaron no se borran, solo quedarán sin persona asignada.')) return;
+  await sb.from('familia').delete().eq('id', id);
+  DATA.familia = DATA.familia.filter(f=>f.id!==id);
+  renderFamilia(); renderDocs();
+};
+
+window.editNickname = async function(id){
+  const f = DATA.familia.find(x=>x.id===id);
+  if(!f) return;
+  const nuevo = prompt(`Apodo para ${f.nombre_completo}:`, f.apodo || '');
+  if(nuevo===null) return;
+  const trimmed = nuevo.trim();
+  if(!trimmed) return;
+  await sb.from('familia').update({apodo:trimmed}).eq('id', id);
+  f.apodo = trimmed;
+  renderFamilia(); renderDocs();
+};
+
+function getNickname(fullName){
+  const f = DATA.familia.find(x=>x.nombre_completo===fullName);
+  return f ? (f.apodo || f.nombre_completo.split(' ')[0]) : fullName;
+}
+
+function renderFamilia(){
+  const list = document.getElementById('familia-list');
+  list.innerHTML = DATA.familia.map(f=>`
+    <span class="tag" style="display:inline-flex; align-items:center; gap:6px; padding:6px 10px;" title="${escapeHtml(f.nombre_completo)}">
+      ${escapeHtml(f.apodo || f.nombre_completo.split(' ')[0])}
+      <button onclick="editNickname('${f.id}')" title="Editar apodo" style="background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:12px; line-height:1;">✎</button>
+      <button onclick="removeFamilyMember('${f.id}')" title="Quitar" style="background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; line-height:1;">✕</button>
+    </span>`).join('') || '<span style="color:var(--ink-soft); font-size:13px;">Aún no hay integrantes agregados.</span>';
+
+  const sel = document.getElementById('d-persona');
+  const current = sel.value;
+  sel.innerHTML = DATA.familia.map(f=>`<option value="${escapeHtml(f.nombre_completo)}">${escapeHtml(f.apodo || f.nombre_completo.split(' ')[0])}</option>`).join('');
+  if(DATA.familia.some(f=>f.nombre_completo===current)) sel.value = current;
+
+  const filterEl = document.getElementById('docs-person-filter');
+  const options = [{nombre_completo:'Todos', apodo:'Todos'}, ...DATA.familia];
+  filterEl.innerHTML = options.map(f=>`<button class="tabbtn ${docsFilterPerson===f.nombre_completo?'active':''}" data-person="${escapeHtml(f.nombre_completo)}">${escapeHtml(f.apodo)}</button>`).join('');
+  filterEl.querySelectorAll('.tabbtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{ docsFilterPerson = btn.dataset.person; renderFamilia(); renderDocs(); });
+  });
+}
+
+/* ---------- GASTOS ---------- */
+document.getElementById('form-gastos').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const row = {
+    fecha: document.getElementById('g-fecha').value, categoria: document.getElementById('g-categoria').value,
+    descripcion: document.getElementById('g-desc').value, monto: parseFloat(document.getElementById('g-monto').value)||0,
+    quien: document.getElementById('g-quien').value || null
+  };
+  const { data, error } = await sb.from('gastos').insert(row).select();
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  DATA.gastos.push(data[0]);
+  e.target.reset();
+  document.getElementById('g-fecha').value = today.toISOString().slice(0,10);
+  renderGastos(); renderDashboard();
+});
+
+function renderGastos(){
+  const list = document.getElementById('list-gastos');
+  const sorted = [...DATA.gastos].sort((a,b)=> b.fecha.localeCompare(a.fecha));
+  if(sorted.length===0){ list.innerHTML = emptyState('Aún no hay gastos registrados.'); }
+  else{
+    list.innerHTML = sorted.map(g=>`
+      <div class="item">
+        <div class="item-main">
+          <div class="item-title">${escapeHtml(g.descripcion)}</div>
+          <div class="item-sub">${fmtDate(g.fecha)}${g.quien? ' · '+escapeHtml(g.quien):''}</div>
+          <div class="item-meta"><span class="tag">${escapeHtml(g.categoria)}</span></div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+          <div class="amount" style="color:var(--gastos)">${fmt(g.monto)}</div>
+          <button class="del-btn" onclick="delItem('gastos','${g.id}')">✕</button>
+        </div>
+      </div>`).join('');
+  }
+
+  const now = new Date();
+  const monthKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const monthGastos = DATA.gastos.filter(g=>g.fecha && g.fecha.startsWith(monthKey));
+  const total = monthGastos.reduce((s,g)=>s+Number(g.monto),0);
+  document.getElementById('gastos-month-total').textContent = fmt(total);
+
+  const byCat = {};
+  monthGastos.forEach(g=>{ byCat[g.categoria] = (byCat[g.categoria]||0) + Number(g.monto); });
+  const maxCat = Math.max(1, ...Object.values(byCat));
+  const catEl = document.getElementById('gastos-catbreak');
+  const entries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  catEl.innerHTML = `<div class="tile-label" style="color:var(--gastos); margin-bottom:10px;">Por categoría (este mes)</div>` +
+    (entries.length ? entries.map(([cat,amt])=>`
+      <div class="catbar-row">
+        <div class="catbar-label">${escapeHtml(cat)}</div>
+        <div class="catbar-track"><div class="catbar-fill" style="width:${(amt/maxCat*100).toFixed(0)}%"></div></div>
+        <div class="catbar-amt">${fmt(amt)}</div>
+      </div>`).join('') : '<div style="color:var(--ink-soft); font-size:13px;">Sin gastos este mes.</div>');
+}
+
+/* ---------- AUTOS ---------- */
+document.getElementById('form-autos').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const row = {
+    nombre: document.getElementById('a-nombre').value, placas: document.getElementById('a-placas').value || null,
+    aceite: document.getElementById('a-aceite').value || null, verificacion: document.getElementById('a-verif').value || null,
+    seguro: document.getElementById('a-seguro').value || null, km: document.getElementById('a-km').value || null,
+    notas: document.getElementById('a-notas').value || null
+  };
+  const { data, error } = await sb.from('autos').insert(row).select();
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  DATA.autos.push(data[0]);
+  e.target.reset();
+  renderAutos(); renderDashboard();
+});
+
+function dateBadge(dateStr, label){
+  if(!dateStr) return '';
+  const d = daysUntil(dateStr);
+  let extra='';
+  if(d < 0){ extra='style="background:#FBEAE8; color:var(--danger); border-color:#FBEAE8;"'; }
+  else if(d <= 30){ extra='style="background:#FBF3E1; color:var(--warn); border-color:#FBF3E1;"'; }
+  return `<span class="tag" ${extra}>${label}: ${fmtDate(dateStr)}${d<0?' (vencido)':''}</span>`;
+}
+
+function renderAutos(){
+  const list = document.getElementById('list-autos');
+  if(DATA.autos.length===0){ list.innerHTML = emptyState('Aún no has agregado ningún auto.'); return; }
+  list.innerHTML = DATA.autos.map(a=>`
+    <div class="item">
+      <div class="item-main">
+        <div class="item-title">${escapeHtml(a.nombre)}</div>
+        <div class="item-sub">${a.placas?escapeHtml(a.placas):''}${a.km?' · '+escapeHtml(a.km):''}</div>
+        <div class="item-meta">
+          ${dateBadge(a.aceite,'Aceite')}
+          ${dateBadge(a.verificacion,'Verificación')}
+          ${dateBadge(a.seguro,'Seguro')}
+        </div>
+        ${a.notas?`<div class="item-sub" style="margin-top:6px;">${escapeHtml(a.notas)}</div>`:''}
+      </div>
+      <button class="del-btn" onclick="delItem('autos','${a.id}')">✕</button>
+    </div>`).join('');
+}
+
+/* ---------- DOCUMENTOS ---------- */
+document.getElementById('form-docs').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const row = {
+    nombre: document.getElementById('d-nombre').value, tipo: document.getElementById('d-tipo').value,
+    persona: document.getElementById('d-persona').value || null,
+    fecha: document.getElementById('d-fecha').value, notas: document.getElementById('d-notas').value || null
+  };
+  const { data, error } = await sb.from('documentos').insert(row).select();
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  DATA.documentos.push(data[0]);
+  e.target.reset();
+  renderDocs(); renderDashboard();
+});
+
+function renderDocs(){
+  const list = document.getElementById('list-docs');
+  if(DATA.documentos.length===0){ list.innerHTML = emptyState('Aún no hay documentos registrados.'); return; }
+  let items = [...DATA.documentos];
+  if(docsFilterPerson !== 'Todos') items = items.filter(d=>d.persona===docsFilterPerson);
+  if(items.length===0){ list.innerHTML = emptyState('Sin documentos para esta persona todavía.'); return; }
+  const sorted = items.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  list.innerHTML = sorted.map(d=>`
+    <div class="item">
+      <div class="item-main">
+        <div class="item-title">${escapeHtml(d.nombre)}</div>
+        <div class="item-sub">${escapeHtml(d.tipo)}${d.notas?' · '+escapeHtml(d.notas):''}</div>
+        <div class="item-meta">${d.persona?`<span class="tag">👤 ${escapeHtml(getNickname(d.persona))}</span>`:''}${dateBadge(d.fecha,'Vence')}</div>
+      </div>
+      <button class="del-btn" onclick="delItem('documentos','${d.id}')">✕</button>
+    </div>`).join('');
+}
+
+/* ---------- SALUD: EJERCICIO (historial) ---------- */
+document.getElementById('form-ejercicio').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const row = {
+    fecha: document.getElementById('e-fecha').value, tipo: document.getElementById('e-tipo').value,
+    duracion: document.getElementById('e-duracion').value ? parseInt(document.getElementById('e-duracion').value) : null,
+    quien: document.getElementById('e-quien').value || null, notas: document.getElementById('e-notas').value || null
+  };
+  const { data, error } = await sb.from('ejercicio').insert(row).select();
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  DATA.ejercicio.push(data[0]);
+  e.target.reset();
+  renderEjercicio(); renderDashboard();
+});
+
+function renderEjercicio(){
+  const list = document.getElementById('list-ejercicio');
+  if(DATA.ejercicio.length===0){ list.innerHTML = emptyState('Aún no hay entrenamientos registrados.'); return; }
+  const sorted = [...DATA.ejercicio].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  list.innerHTML = sorted.map(x=>`
+    <div class="item">
+      <div class="item-main">
+        <div class="item-title">${escapeHtml(x.tipo)}</div>
+        <div class="item-sub">${fmtDate(x.fecha)}${x.duracion?' · '+x.duracion+' min':''}${x.quien?' · '+escapeHtml(x.quien):''}</div>
+        ${x.notas?`<div class="item-sub" style="margin-top:4px;">${escapeHtml(x.notas)}</div>`:''}
+      </div>
+      <button class="del-btn" onclick="delItem('ejercicio','${x.id}')">✕</button>
+    </div>`).join('');
+}
+
+/* ---------- SALUD: ALIMENTACIÓN ---------- */
+document.getElementById('form-alimentacion').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const row = {
+    fecha: document.getElementById('al-fecha').value, tipo: document.getElementById('al-tipo').value,
+    descripcion: document.getElementById('al-desc').value, notas: document.getElementById('al-notas').value || null
+  };
+  const { data, error } = await sb.from('alimentacion').insert(row).select();
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  DATA.alimentacion.push(data[0]);
+  e.target.reset();
+  renderAlimentacion();
+});
+
+function renderAlimentacion(){
+  const list = document.getElementById('list-alimentacion');
+  if(DATA.alimentacion.length===0){ list.innerHTML = emptyState('Aún no hay comidas registradas.'); return; }
+  const sorted = [...DATA.alimentacion].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  list.innerHTML = sorted.map(x=>`
+    <div class="item">
+      <div class="item-main">
+        <div class="item-title">${escapeHtml(x.descripcion)}</div>
+        <div class="item-sub">${fmtDate(x.fecha)} · ${escapeHtml(x.tipo)}</div>
+        ${x.notas?`<div class="item-sub" style="margin-top:4px;">${escapeHtml(x.notas)}</div>`:''}
+      </div>
+      <button class="del-btn" onclick="delItem('alimentacion','${x.id}')">✕</button>
+    </div>`).join('');
+}
+
+/* ---------- HOGAR ---------- */
+document.getElementById('form-hogar').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const row = {
+    nombre: document.getElementById('h-nombre').value, ubicacion: document.getElementById('h-ubicacion').value || null,
+    contenido: document.getElementById('h-contenido').value, notas: document.getElementById('h-notas').value || null
+  };
+  const { data, error } = await sb.from('hogar').insert(row).select();
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  DATA.hogar.push(data[0]);
+  e.target.reset();
+  renderHogar(); renderDashboard();
+});
+document.getElementById('h-search').addEventListener('input', renderHogar);
+
+function renderHogar(){
+  const list = document.getElementById('list-hogar');
+  const q = document.getElementById('h-search').value.trim().toLowerCase();
+  let items = [...DATA.hogar];
+  if(q){
+    items = items.filter(h => (h.nombre+' '+(h.ubicacion||'')+' '+h.contenido+' '+(h.notas||'')).toLowerCase().includes(q));
+  }
+  if(DATA.hogar.length===0){ list.innerHTML = emptyState('Aún no has agregado nada al inventario del hogar.'); return; }
+  if(items.length===0){ list.innerHTML = emptyState('Nada coincide con tu búsqueda.'); return; }
+  list.innerHTML = items.map(h=>`
+    <div class="item">
+      <div class="item-main">
+        <div class="item-title">${escapeHtml(h.nombre)}</div>
+        <div class="item-sub">${escapeHtml(h.contenido)}</div>
+        <div class="item-meta">${h.ubicacion?`<span class="tag">📍 ${escapeHtml(h.ubicacion)}</span>`:''}</div>
+        ${h.notas?`<div class="item-sub" style="margin-top:4px;">${escapeHtml(h.notas)}</div>`:''}
+      </div>
+      <button class="del-btn" onclick="delItem('hogar','${h.id}')">✕</button>
+    </div>`).join('');
+}
+
+/* ---------- CALENDARIO DE EJERCICIO ---------- */
+let calViewDate = new Date(today.getFullYear(), today.getMonth(), 1);
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+document.getElementById('cal-prev').addEventListener('click', ()=>{ calViewDate.setMonth(calViewDate.getMonth()-1); renderCalendar(); });
+document.getElementById('cal-next').addEventListener('click', ()=>{ calViewDate.setMonth(calViewDate.getMonth()+1); renderCalendar(); });
+
+function renderCalendar(){
+  const y = calViewDate.getFullYear(), m = calViewDate.getMonth();
+  document.getElementById('cal-month-label').textContent = `${MESES[m]} ${y}`;
+  const firstDow = (new Date(y,m,1).getDay()+6)%7;
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const grid = document.getElementById('cal-grid');
+  let html = '';
+  for(let i=0;i<firstDow;i++) html += `<div class="cal-cell empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const key = dateKey(y,m,d);
+    const entry = DATA.ejercicioCal[key] || {};
+    const mDone = !!(entry.mariana && entry.mariana.done);
+    const lDone = !!(entry.luijo && entry.luijo.done);
+    const hasNote = (entry.mariana && entry.mariana.nota) || (entry.luijo && entry.luijo.nota);
+    const isToday = key === dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+    html += `<div class="cal-cell ${isToday?'today':''}" data-date="${key}">
+      <span>${d}</span>
+      <span class="cal-dots">
+        <span class="cal-dot mariana ${mDone?'on':''}"></span>
+        <span class="cal-dot luijo ${lDone?'on':''}"></span>
+      </span>
+      ${hasNote?'<span class="cal-note-dot"></span>':''}
+    </div>`;
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll('.cal-cell:not(.empty)').forEach(cell=>{
+    cell.addEventListener('click', ()=> openCalModal(cell.dataset.date));
+  });
+}
+
+let calModalDate = null;
+function openCalModal(key){
+  calModalDate = key;
+  const entry = DATA.ejercicioCal[key] || {};
+  const mariana = entry.mariana || {done:false, nota:''};
+  const luijo = entry.luijo || {done:false, nota:''};
+  const [y,m,d] = key.split('-').map(Number);
+  document.getElementById('cal-modal-date').textContent = `${d} de ${MESES[m-1]}`;
+  document.getElementById('cal-modal-done-mariana').checked = !!mariana.done;
+  document.getElementById('cal-modal-nota-mariana').value = mariana.nota || '';
+  document.getElementById('cal-modal-done-luijo').checked = !!luijo.done;
+  document.getElementById('cal-modal-nota-luijo').value = luijo.nota || '';
+  document.getElementById('cal-modal-overlay').style.display = 'flex';
+}
+function closeCalModal(){ document.getElementById('cal-modal-overlay').style.display = 'none'; calModalDate = null; }
+
+document.getElementById('cal-modal-cancel').addEventListener('click', closeCalModal);
+document.getElementById('cal-modal-overlay').addEventListener('click', e=>{ if(e.target.id==='cal-modal-overlay') closeCalModal(); });
+document.getElementById('cal-modal-save').addEventListener('click', async ()=>{
+  if(!calModalDate) return;
+  const mariana = { done: document.getElementById('cal-modal-done-mariana').checked, nota: document.getElementById('cal-modal-nota-mariana').value.trim() };
+  const luijo = { done: document.getElementById('cal-modal-done-luijo').checked, nota: document.getElementById('cal-modal-nota-luijo').value.trim() };
+  if(!mariana.done && !mariana.nota && !luijo.done && !luijo.nota){
+    await sb.from('ejercicio_calendario').delete().eq('fecha', calModalDate);
+    delete DATA.ejercicioCal[calModalDate];
+  } else {
+    await sb.from('ejercicio_calendario').upsert({
+      fecha: calModalDate, mariana_done: mariana.done, mariana_nota: mariana.nota || null,
+      luijo_done: luijo.done, luijo_nota: luijo.nota || null
+    }, { onConflict:'fecha' });
+    DATA.ejercicioCal[calModalDate] = { mariana, luijo };
+  }
+  closeCalModal();
+  renderCalendar(); renderDashboard();
+});
+
+/* ---------- DASHBOARD ---------- */
+function renderDashboard(){
+  const now = new Date();
+  const monthKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const monthTotal = DATA.gastos.filter(g=>g.fecha && g.fecha.startsWith(monthKey)).reduce((s,g)=>s+Number(g.monto),0);
+  document.getElementById('tile-gastos').textContent = fmt(monthTotal);
+  document.getElementById('tile-autos').textContent = DATA.autos.length;
+  document.getElementById('tile-docs').textContent = DATA.documentos.length;
+  document.getElementById('tile-hogar').textContent = DATA.hogar.length;
+
+  const calDoneDays = new Set(Object.entries(DATA.ejercicioCal).filter(([k,v])=>(v.mariana&&v.mariana.done)||(v.luijo&&v.luijo.done)).map(([k])=>k));
+  const loggedDays = new Set(DATA.ejercicio.filter(x=>x.fecha).map(x=>x.fecha));
+  let weekCount = 0;
+  for(let i=0;i<7;i++){
+    const d = new Date(today); d.setDate(d.getDate()-i);
+    const k = dateKey(d.getFullYear(), d.getMonth(), d.getDate());
+    if(calDoneDays.has(k) || loggedDays.has(k)) weekCount++;
+  }
+  document.getElementById('tile-salud').textContent = weekCount;
+
+  const autoAlerts = [];
+  DATA.autos.forEach(a=>{
+    [['aceite','Cambio de aceite'],['verificacion','Verificación'],['seguro','Seguro']].forEach(([k,label])=>{
+      const d = daysUntil(a[k]);
+      if(d!==null && d<=30) autoAlerts.push({nombre:a.nombre, label, date:a[k], d});
+    });
+  });
+  autoAlerts.sort((x,y)=>x.d-y.d);
+  const autosEl = document.getElementById('alerts-autos');
+  autosEl.innerHTML = autoAlerts.length ? autoAlerts.map(x=>`
+    <div class="alert-row">
+      <span>${escapeHtml(x.nombre)} — ${x.label}</span>
+      <span class="pill ${x.d<0?'overdue':'soon'}">${x.d<0? 'Vencido · '+fmtDate(x.date) : x.d===0?'Hoy':'En '+x.d+' días'}</span>
+    </div>`).join('') : '<div class="empty-note">Todo en orden, sin vencimientos próximos. ✅</div>';
+
+  const docAlerts = DATA.documentos.map(d=>({...d, d: daysUntil(d.fecha)})).filter(d=>d.d!==null && d.d<=60).sort((a,b)=>a.d-b.d);
+  const docsEl = document.getElementById('alerts-docs');
+  docsEl.innerHTML = docAlerts.length ? docAlerts.map(x=>`
+    <div class="alert-row">
+      <span>${escapeHtml(x.nombre)}</span>
+      <span class="pill ${x.d<0?'overdue':'soon'}">${x.d<0? 'Vencido · '+fmtDate(x.fecha) : x.d===0?'Hoy':'En '+x.d+' días'}</span>
+    </div>`).join('') : '<div class="empty-note">Todo en orden, sin vencimientos próximos. ✅</div>';
+}
+
+/* ---------- BORRAR (SUPABASE) ---------- */
+const TABLE_MAP = { gastos:'gastos', autos:'autos', documentos:'documentos', ejercicio:'ejercicio', alimentacion:'alimentacion', hogar:'hogar' };
+window.delItem = async function(key, id){
+  const table = TABLE_MAP[key];
+  const { error } = await sb.from(table).delete().eq('id', id);
+  if(error){ alert('Error al borrar: ' + error.message); return; }
+  DATA[key] = DATA[key].filter(x=>x.id!==id);
+  renderAll();
+};
+
+// default date inputs to today
+document.querySelectorAll('input[type="date"]').forEach(inp=>{
+  inp.value = today.toISOString().slice(0,10);
+});
+
+checkSession();
+</script>
+</body>
+</html>
