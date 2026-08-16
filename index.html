@@ -1003,11 +1003,29 @@ document.getElementById('form-hogar').addEventListener('submit', async e=>{
 });
 document.getElementById('h-search').addEventListener('input', renderHogar);
 
-function hogarItemCard(h, highlightLocation){
+const stripAccents = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function highlightMatch(text, query){
+  if(!text) return '';
+  if(!query) return escapeHtml(text);
+  const normText = stripAccents(text.toLowerCase());
+  const normQuery = stripAccents(query.toLowerCase());
+  if(!normQuery) return escapeHtml(text);
+  let result = '', i = 0;
+  while(i < text.length){
+    const idx = normText.indexOf(normQuery, i);
+    if(idx === -1){ result += escapeHtml(text.slice(i)); break; }
+    result += escapeHtml(text.slice(i, idx));
+    result += '<span style="color:var(--pine); font-weight:700; text-decoration:underline; text-decoration-color:var(--pine);">' + escapeHtml(text.slice(idx, idx+normQuery.length)) + '</span>';
+    i = idx + normQuery.length;
+  }
+  return result;
+}
+
+function hogarItemCard(h, highlightLocation, query){
   return `
     <div class="item">
       <div class="item-main">
-        ${highlightLocation && h.ubicacion ? `<div class="item-sub" style="font-weight:700; color:var(--hogar); margin-bottom:2px;">📍 ${escapeHtml(h.ubicacion)}</div>` : ''}
+        ${highlightLocation && h.ubicacion ? `<div class="item-sub" style="font-weight:700; margin-bottom:2px;">📍 ${highlightMatch(h.ubicacion, query)}</div>` : ''}
         <div class="item-title">${escapeHtml(h.nombre)}</div>
         <div class="item-sub">${escapeHtml(h.contenido)}</div>
         ${(!highlightLocation && h.ubicacion) ? `<div class="item-meta"><span class="tag">📍 ${escapeHtml(h.ubicacion)}</span></div>` : ''}
@@ -1027,24 +1045,25 @@ function renderHogar(){
   if(DATA.hogar.length===0){ list.innerHTML = emptyState('Aún no has agregado nada al inventario del hogar.'); return; }
 
   if(q){
-    const items = DATA.hogar.filter(h => (h.nombre+' '+(h.ubicacion||'')+' '+h.contenido+' '+(h.notas||'')).toLowerCase().includes(q));
+    const normQ = stripAccents(q);
+    const items = DATA.hogar.filter(h => stripAccents((h.nombre+' '+(h.ubicacion||'')+' '+h.contenido+' '+(h.notas||'')).toLowerCase()).includes(normQ));
     if(items.length===0){ list.innerHTML = emptyState('Nada coincide con tu búsqueda.'); return; }
-    list.innerHTML = items.map(h=>hogarItemCard(h, true)).join('');
+    list.innerHTML = items.map(h=>hogarItemCard(h, true, q)).join('');
     return;
   }
 
-  // Sin búsqueda: agrupar por ubicación (acordeón)
+  // Sin búsqueda: agrupar por contenedor / lugar (acordeón)
   const groups = {};
   DATA.hogar.forEach(h=>{
-    const key = h.ubicacion && h.ubicacion.trim() ? h.ubicacion.trim() : 'Sin ubicación asignada';
+    const key = h.nombre && h.nombre.trim() ? h.nombre.trim() : 'Sin nombre';
     if(!groups[key]) groups[key] = [];
     groups[key].push(h);
   });
   const sortedKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b));
-  list.innerHTML = sortedKeys.map(loc=>`
+  list.innerHTML = sortedKeys.map(cont=>`
     <details class="hogar-group">
-      <summary>${escapeHtml(loc)} <span class="count">${groups[loc].length} ${groups[loc].length===1?'artículo':'artículos'}</span></summary>
-      <div class="hogar-group-body">${groups[loc].map(h=>hogarItemCard(h, false)).join('')}</div>
+      <summary>${escapeHtml(cont)} <span class="count">${groups[cont].length} ${groups[cont].length===1?'registro':'registros'}</span></summary>
+      <div class="hogar-group-body">${groups[cont].map(h=>hogarItemCard(h, false)).join('')}</div>
     </details>`).join('');
 }
 
