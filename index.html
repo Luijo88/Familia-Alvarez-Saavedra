@@ -148,6 +148,14 @@
   .collapse-card summary::-webkit-details-marker{display:none;}
   .collapse-card[open] summary{margin-bottom:4px;}
 
+  .hogar-group{border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden; background:var(--surface);}
+  .hogar-group summary{cursor:pointer; user-select:none; list-style:none; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:14.5px;}
+  .hogar-group summary::-webkit-details-marker{display:none;}
+  .hogar-group summary::after{content:'▾'; color:var(--ink-soft); font-weight:400; transition:transform .15s;}
+  .hogar-group[open] summary::after{transform:rotate(180deg);}
+  .hogar-group summary .count{color:var(--ink-soft); font-weight:600; font-size:12.5px;}
+  .hogar-group-body{padding:0 16px 14px 16px;}
+
   /* Auth / lock-style card (reused) */
   #auth-screen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;}
   .lock-wrap{max-width:380px; width:100%; text-align:center;}
@@ -441,17 +449,37 @@
     <section class="section" id="sec-hogar">
       <div class="page-head"><h1>Hogar</h1><p>¿Dónde están guardadas las cosas? Busca y encuentra todo.</p></div>
       <input type="text" class="search-box" id="h-search" placeholder="Buscar... ej. 'ropa niño', 'campamento'">
-      <form class="form card" id="form-hogar" style="margin-bottom:22px;">
-        <div class="form-row">
-          <div><label>Contenedor / lugar</label><input type="text" id="h-nombre" placeholder="Ej. Maleta negra" required></div>
-          <div><label>¿Dónde está guardado?</label><input type="text" id="h-ubicacion" placeholder="Ej. Clóset del pasillo"></div>
-        </div>
-        <div><label>¿Qué contiene?</label><textarea id="h-contenido" placeholder="Ej. Ropa de niño de 3 años" required></textarea></div>
-        <div><label>Notas (opcional)</label><input type="text" id="h-notas" placeholder="Ej. Revisar cada temporada"></div>
-        <button class="btn" type="submit">Agregar al inventario</button>
-      </form>
       <div id="list-hogar"></div>
+      <details class="collapse-card" style="margin-top:8px;">
+        <summary class="btn secondary" style="display:inline-block;">+ Agregar al inventario</summary>
+        <form class="form card" id="form-hogar" style="margin-top:14px;">
+          <div class="form-row">
+            <div><label>Contenedor / lugar</label><input type="text" id="h-nombre" placeholder="Ej. Maleta negra" required></div>
+            <div><label>¿Dónde está guardado?</label><input type="text" id="h-ubicacion" placeholder="Ej. Clóset del pasillo"></div>
+          </div>
+          <div><label>¿Qué contiene?</label><textarea id="h-contenido" placeholder="Ej. Ropa de niño de 3 años" required></textarea></div>
+          <div><label>Notas (opcional)</label><input type="text" id="h-notas" placeholder="Ej. Revisar cada temporada"></div>
+          <button class="btn" type="submit">Agregar al inventario</button>
+        </form>
+      </details>
     </section>
+
+    <!-- Modal editar item de hogar -->
+    <div id="hogar-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(30,35,31,0.4); z-index:50; align-items:center; justify-content:center; padding:20px;">
+      <div class="card" style="max-width:400px; width:100%;">
+        <div class="display" style="font-size:18px; font-weight:600; margin-bottom:14px;">Editar</div>
+        <div class="form-row">
+          <div><label>Contenedor / lugar</label><input type="text" id="hm-nombre"></div>
+          <div><label>¿Dónde está guardado?</label><input type="text" id="hm-ubicacion"></div>
+        </div>
+        <div><label>¿Qué contiene?</label><textarea id="hm-contenido"></textarea></div>
+        <div><label>Notas</label><input type="text" id="hm-notas"></div>
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <button class="btn" id="hogar-modal-save" type="button" style="flex:1;">Guardar cambios</button>
+          <button class="btn secondary" id="hogar-modal-cancel" type="button">Cancelar</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <nav id="bottomnav">
@@ -970,30 +998,84 @@ document.getElementById('form-hogar').addEventListener('submit', async e=>{
   if(error){ alert('Error al guardar: ' + error.message); return; }
   DATA.hogar.push(data[0]);
   e.target.reset();
+  e.target.closest('details').open = false;
   renderHogar(); renderDashboard();
 });
 document.getElementById('h-search').addEventListener('input', renderHogar);
 
+function hogarItemCard(h, highlightLocation){
+  return `
+    <div class="item">
+      <div class="item-main">
+        ${highlightLocation && h.ubicacion ? `<div class="item-sub" style="font-weight:700; color:var(--hogar); margin-bottom:2px;">📍 ${escapeHtml(h.ubicacion)}</div>` : ''}
+        <div class="item-title">${escapeHtml(h.nombre)}</div>
+        <div class="item-sub">${escapeHtml(h.contenido)}</div>
+        ${(!highlightLocation && h.ubicacion) ? `<div class="item-meta"><span class="tag">📍 ${escapeHtml(h.ubicacion)}</span></div>` : ''}
+        ${h.notas?`<div class="item-sub" style="margin-top:4px;">${escapeHtml(h.notas)}</div>`:''}
+      </div>
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+        <button class="del-btn" onclick="openHogarEdit('${h.id}')" title="Editar">✎</button>
+        <button class="del-btn" onclick="delItem('hogar','${h.id}')" title="Borrar">✕</button>
+      </div>
+    </div>`;
+}
+
 function renderHogar(){
   const list = document.getElementById('list-hogar');
   const q = document.getElementById('h-search').value.trim().toLowerCase();
-  let items = [...DATA.hogar];
-  if(q){
-    items = items.filter(h => (h.nombre+' '+(h.ubicacion||'')+' '+h.contenido+' '+(h.notas||'')).toLowerCase().includes(q));
-  }
+
   if(DATA.hogar.length===0){ list.innerHTML = emptyState('Aún no has agregado nada al inventario del hogar.'); return; }
-  if(items.length===0){ list.innerHTML = emptyState('Nada coincide con tu búsqueda.'); return; }
-  list.innerHTML = items.map(h=>`
-    <div class="item">
-      <div class="item-main">
-        <div class="item-title">${escapeHtml(h.nombre)}</div>
-        <div class="item-sub">${escapeHtml(h.contenido)}</div>
-        <div class="item-meta">${h.ubicacion?`<span class="tag">📍 ${escapeHtml(h.ubicacion)}</span>`:''}</div>
-        ${h.notas?`<div class="item-sub" style="margin-top:4px;">${escapeHtml(h.notas)}</div>`:''}
-      </div>
-      <button class="del-btn" onclick="delItem('hogar','${h.id}')">✕</button>
-    </div>`).join('');
+
+  if(q){
+    const items = DATA.hogar.filter(h => (h.nombre+' '+(h.ubicacion||'')+' '+h.contenido+' '+(h.notas||'')).toLowerCase().includes(q));
+    if(items.length===0){ list.innerHTML = emptyState('Nada coincide con tu búsqueda.'); return; }
+    list.innerHTML = items.map(h=>hogarItemCard(h, true)).join('');
+    return;
+  }
+
+  // Sin búsqueda: agrupar por ubicación (acordeón)
+  const groups = {};
+  DATA.hogar.forEach(h=>{
+    const key = h.ubicacion && h.ubicacion.trim() ? h.ubicacion.trim() : 'Sin ubicación asignada';
+    if(!groups[key]) groups[key] = [];
+    groups[key].push(h);
+  });
+  const sortedKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+  list.innerHTML = sortedKeys.map(loc=>`
+    <details class="hogar-group">
+      <summary>${escapeHtml(loc)} <span class="count">${groups[loc].length} ${groups[loc].length===1?'artículo':'artículos'}</span></summary>
+      <div class="hogar-group-body">${groups[loc].map(h=>hogarItemCard(h, false)).join('')}</div>
+    </details>`).join('');
 }
+
+window.openHogarEdit = function(id){
+  const h = DATA.hogar.find(x=>x.id===id);
+  if(!h) return;
+  document.getElementById('hogar-modal-overlay').dataset.editId = id;
+  document.getElementById('hm-nombre').value = h.nombre || '';
+  document.getElementById('hm-ubicacion').value = h.ubicacion || '';
+  document.getElementById('hm-contenido').value = h.contenido || '';
+  document.getElementById('hm-notas').value = h.notas || '';
+  document.getElementById('hogar-modal-overlay').style.display = 'flex';
+};
+function closeHogarModal(){ document.getElementById('hogar-modal-overlay').style.display = 'none'; }
+document.getElementById('hogar-modal-cancel').addEventListener('click', closeHogarModal);
+document.getElementById('hogar-modal-overlay').addEventListener('click', e=>{ if(e.target.id==='hogar-modal-overlay') closeHogarModal(); });
+document.getElementById('hogar-modal-save').addEventListener('click', async ()=>{
+  const id = document.getElementById('hogar-modal-overlay').dataset.editId;
+  const updates = {
+    nombre: document.getElementById('hm-nombre').value,
+    ubicacion: document.getElementById('hm-ubicacion').value || null,
+    contenido: document.getElementById('hm-contenido').value,
+    notas: document.getElementById('hm-notas').value || null
+  };
+  const { error } = await sb.from('hogar').update(updates).eq('id', id);
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  const h = DATA.hogar.find(x=>x.id===id);
+  if(h) Object.assign(h, updates);
+  closeHogarModal();
+  renderHogar();
+});
 
 /* ---------- CALENDARIO DE EJERCICIO ---------- */
 let calViewDate = new Date(today.getFullYear(), today.getMonth(), 1);
