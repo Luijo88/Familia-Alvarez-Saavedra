@@ -144,6 +144,10 @@
   .empty-state{text-align:center; padding:36px 20px; color:var(--ink-soft);}
   .empty-state .display{font-size:18px; color:var(--ink); margin-bottom:6px;}
 
+  .collapse-card summary{cursor:pointer; user-select:none; list-style:none; width:fit-content;}
+  .collapse-card summary::-webkit-details-marker{display:none;}
+  .collapse-card[open] summary{margin-bottom:4px;}
+
   /* Auth / lock-style card (reused) */
   #auth-screen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;}
   .lock-wrap{max-width:380px; width:100%; text-align:center;}
@@ -247,8 +251,12 @@
 
       <div class="card">
         <div class="tile-label" style="margin-bottom:6px;">¿Vienes de la versión anterior?</div>
-        <p style="margin:0 0 12px 0; color:var(--ink-soft); font-size:13.5px;">Importa una sola vez los datos que ya habían capturado. Esto solo funciona mientras la app sigue abierta aquí en Claude (antes de moverla a GitHub Pages).</p>
-        <button class="btn secondary" type="button" id="migrate-btn">Importar datos anteriores</button>
+        <p style="margin:0 0 12px 0; color:var(--ink-soft); font-size:13.5px;">Es en dos pasos porque Claude bloquea las conexiones a Supabase, y tu URL de GitHub Pages no tiene los datos viejos guardados ahí.</p>
+        <p style="margin:0 0 8px 0; font-size:13px; font-weight:600;">Paso 1 — aquí en Claude:</p>
+        <button class="btn secondary" type="button" id="export-btn" style="margin-bottom:14px;">Descargar datos anteriores (archivo)</button>
+        <p style="margin:0 0 8px 0; font-size:13px; font-weight:600;">Paso 2 — ya en tu URL de GitHub Pages:</p>
+        <input type="file" id="import-file-input" accept=".json" style="display:none;">
+        <button class="btn secondary" type="button" id="import-btn">Subir ese archivo aquí</button>
       </div>
     </section>
 
@@ -285,23 +293,26 @@
     <!-- AUTOS -->
     <section class="section" id="sec-autos">
       <div class="page-head"><h1>Autos</h1><p>Mantenimiento, verificación y seguro de cada auto.</p></div>
-      <form class="form card" id="form-autos" style="margin-bottom:22px;">
-        <div class="form-row">
-          <div><label>Nombre del auto</label><input type="text" id="a-nombre" placeholder="Ej. Auto de Luijo" required></div>
-          <div><label>Placas</label><input type="text" id="a-placas" placeholder="Ej. ABC-123"></div>
-        </div>
-        <div class="form-row">
-          <div><label>Próximo cambio de aceite</label><input type="date" id="a-aceite"></div>
-          <div><label>Próxima verificación</label><input type="date" id="a-verif"></div>
-        </div>
-        <div class="form-row">
-          <div><label>Vencimiento del seguro</label><input type="date" id="a-seguro"></div>
-          <div><label>Kilometraje actual (opcional)</label><input type="text" id="a-km" placeholder="Ej. 45,000 km"></div>
-        </div>
-        <div><label>Notas</label><textarea id="a-notas" placeholder="Ej. Taller de confianza, llantas, etc."></textarea></div>
-        <button class="btn" type="submit">Agregar auto</button>
-      </form>
       <div id="list-autos"></div>
+      <details class="collapse-card" style="margin-top:8px;">
+        <summary class="btn secondary" style="display:inline-block;">+ Agregar auto nuevo</summary>
+        <form class="form card" id="form-autos" style="margin-top:14px;">
+          <div class="form-row">
+            <div><label>Nombre del auto</label><input type="text" id="a-nombre" placeholder="Ej. Auto de Luijo" required></div>
+            <div><label>Placas</label><input type="text" id="a-placas" placeholder="Ej. ABC-123"></div>
+          </div>
+          <div class="form-row">
+            <div><label>Próximo cambio de aceite</label><input type="date" id="a-aceite"></div>
+            <div><label>Próxima verificación</label><input type="date" id="a-verif"></div>
+          </div>
+          <div class="form-row">
+            <div><label>Vencimiento del seguro</label><input type="date" id="a-seguro"></div>
+            <div><label>Kilometraje actual (opcional)</label><input type="text" id="a-km" placeholder="Ej. 45,000 km"></div>
+          </div>
+          <div><label>Notas</label><textarea id="a-notas" placeholder="Ej. Taller de confianza, llantas, etc."></textarea></div>
+          <button class="btn" type="submit">Agregar auto</button>
+        </form>
+      </details>
     </section>
 
     <!-- DOCUMENTOS -->
@@ -584,57 +595,77 @@ function renderAll(){
   renderFamilia(); renderGastos(); renderAutos(); renderDocs(); renderEjercicio(); renderAlimentacion(); renderHogar(); renderDashboard(); renderCalendar();
 }
 
-/* ---------- MIGRACIÓN DESDE LA VERSIÓN ANTERIOR ---------- */
-document.getElementById('migrate-btn').addEventListener('click', async ()=>{
-  const btn = document.getElementById('migrate-btn');
+/* ---------- EXPORTAR DATOS ANTERIORES (solo usa window.storage, funciona aquí en Claude) ---------- */
+document.getElementById('export-btn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('export-btn');
   if(typeof window.storage === 'undefined'){
-    alert('Esta función solo funciona mientras la app sigue abierta aquí en Claude (antes de moverla a GitHub Pages). No encontré datos anteriores en este navegador.');
+    alert('No encontré el almacenamiento anterior de Claude en este navegador. Este botón solo funciona aquí dentro de Claude.');
     return;
   }
+  btn.disabled = true; btn.textContent = 'Descargando...';
+  try{
+    const keys = { gastos:'gastos-data', autos:'autos-data', documentos:'documentos-data', ejercicio:'ejercicio-data', alimentacion:'alimentacion-data', hogar:'hogar-data', familia:'familia-data', ejercicioCal:'ejercicio-calendario-data' };
+    const out = {};
+    for(const [k, storageKey] of Object.entries(keys)){
+      try{ const r = await window.storage.get(storageKey, true); out[k] = r && r.value ? JSON.parse(r.value) : null; }
+      catch(e){ out[k] = null; }
+    }
+    const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'nuestro-hogar-datos-anteriores.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }catch(err){
+    console.error(err);
+    alert('Hubo un error al exportar: ' + err.message);
+  }
+  btn.disabled = false; btn.textContent = 'Descargar datos anteriores (archivo)';
+});
+
+/* ---------- IMPORTAR DESDE ARCHIVO (solo usa Supabase, funciona en tu URL de GitHub Pages) ---------- */
+document.getElementById('import-btn').addEventListener('click', ()=> document.getElementById('import-file-input').click());
+document.getElementById('import-file-input').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const btn = document.getElementById('import-btn');
   btn.disabled = true; btn.textContent = 'Importando...';
   try{
+    const text = await file.text();
+    const old = JSON.parse(text);
     let count = 0;
-    const get = async k => { try{ const r = await window.storage.get(k, true); return r && r.value ? JSON.parse(r.value) : null; }catch(e){ return null; } };
 
-    const oldGastos = await get('gastos-data');
-    if(oldGastos && oldGastos.length){
-      const rows = oldGastos.map(g=>({fecha:g.fecha, categoria:g.categoria, descripcion:g.desc, monto:g.monto, quien:g.quien||null}));
+    if(old.gastos && old.gastos.length){
+      const rows = old.gastos.map(g=>({fecha:g.fecha, categoria:g.categoria, descripcion:g.desc, monto:g.monto, quien:g.quien||null}));
       await sb.from('gastos').insert(rows); count += rows.length;
     }
-    const oldAutos = await get('autos-data');
-    if(oldAutos && oldAutos.length){
-      const rows = oldAutos.map(a=>({nombre:a.nombre, placas:a.placas||null, aceite:a.aceite||null, verificacion:a.verif||null, seguro:a.seguro||null, km:a.km||null, notas:a.notas||null}));
+    if(old.autos && old.autos.length){
+      const rows = old.autos.map(a=>({nombre:a.nombre, placas:a.placas||null, aceite:a.aceite||null, verificacion:a.verif||null, seguro:a.seguro||null, km:a.km||null, notas:a.notas||null}));
       await sb.from('autos').insert(rows); count += rows.length;
     }
-    const oldDocs = await get('documentos-data');
-    if(oldDocs && oldDocs.length){
-      const rows = oldDocs.map(d=>({nombre:d.nombre, tipo:d.tipo, persona:d.persona||null, fecha:d.fecha, notas:d.notas||null}));
+    if(old.documentos && old.documentos.length){
+      const rows = old.documentos.map(d=>({nombre:d.nombre, tipo:d.tipo, persona:d.persona||null, fecha:d.fecha, notas:d.notas||null}));
       await sb.from('documentos').insert(rows); count += rows.length;
     }
-    const oldEj = await get('ejercicio-data');
-    if(oldEj && oldEj.length){
-      const rows = oldEj.map(x=>({fecha:x.fecha, tipo:x.tipo, duracion:x.duracion?parseInt(x.duracion):null, quien:x.quien||null, notas:x.notas||null}));
+    if(old.ejercicio && old.ejercicio.length){
+      const rows = old.ejercicio.map(x=>({fecha:x.fecha, tipo:x.tipo, duracion:x.duracion?parseInt(x.duracion):null, quien:x.quien||null, notas:x.notas||null}));
       await sb.from('ejercicio').insert(rows); count += rows.length;
     }
-    const oldAl = await get('alimentacion-data');
-    if(oldAl && oldAl.length){
-      const rows = oldAl.map(x=>({fecha:x.fecha, tipo:x.tipo, descripcion:x.desc, notas:x.notas||null}));
+    if(old.alimentacion && old.alimentacion.length){
+      const rows = old.alimentacion.map(x=>({fecha:x.fecha, tipo:x.tipo, descripcion:x.desc, notas:x.notas||null}));
       await sb.from('alimentacion').insert(rows); count += rows.length;
     }
-    const oldHogar = await get('hogar-data');
-    if(oldHogar && oldHogar.length){
-      const rows = oldHogar.map(x=>({nombre:x.nombre, ubicacion:x.ubicacion||null, contenido:x.contenido, notas:x.notas||null}));
+    if(old.hogar && old.hogar.length){
+      const rows = old.hogar.map(x=>({nombre:x.nombre, ubicacion:x.ubicacion||null, contenido:x.contenido, notas:x.notas||null}));
       await sb.from('hogar').insert(rows); count += rows.length;
     }
-    const oldFam = await get('familia-data');
-    if(oldFam && oldFam.length){
-      for(const f of oldFam){
+    if(old.familia && old.familia.length){
+      for(const f of old.familia){
         await sb.from('familia').update({apodo:f.nickname}).eq('nombre_completo', f.name);
       }
     }
-    const oldCal = await get('ejercicio-calendario-data');
-    if(oldCal && Object.keys(oldCal).length){
-      const rows = Object.entries(oldCal).map(([fecha,v])=>({
+    if(old.ejercicioCal && Object.keys(old.ejercicioCal).length){
+      const rows = Object.entries(old.ejercicioCal).map(([fecha,v])=>({
         fecha,
         mariana_done: !!(v.mariana && v.mariana.done), mariana_nota: (v.mariana && v.mariana.nota) || null,
         luijo_done: !!(v.luijo && v.luijo.done), luijo_nota: (v.luijo && v.luijo.nota) || null
@@ -648,7 +679,8 @@ document.getElementById('migrate-btn').addEventListener('click', async ()=>{
     console.error(err);
     alert('Hubo un error al importar: ' + err.message);
   }
-  btn.disabled = false; btn.textContent = 'Importar datos anteriores';
+  btn.disabled = false; btn.textContent = 'Subir ese archivo aquí';
+  e.target.value = '';
 });
 
 /* ---------- NAV ---------- */
@@ -803,6 +835,7 @@ document.getElementById('form-autos').addEventListener('submit', async e=>{
   if(error){ alert('Error al guardar: ' + error.message); return; }
   DATA.autos.push(data[0]);
   e.target.reset();
+  e.target.closest('details').open = false;
   renderAutos(); renderDashboard();
 });
 
