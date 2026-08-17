@@ -134,6 +134,13 @@
   .tabbtn.active{color:var(--pine); border-bottom-color:var(--pine);}
 
   .search-box{margin-bottom:16px;}
+  .search-wrap{position:relative; margin-bottom:16px;}
+  .search-wrap .search-box{margin-bottom:0; padding-right:36px;}
+  .search-clear{display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%); background:var(--bg); border:none; color:var(--ink-soft); cursor:pointer; font-size:16px; line-height:1; width:24px; height:24px; border-radius:50%;}
+  .search-clear:hover{background:var(--line); color:var(--ink);}
+
+  .contenido-list{margin:4px 0 0 0; padding-left:20px; font-size:13px; color:var(--ink-soft); display:flex; flex-direction:column; gap:2px;}
+  .contenido-list li{padding-left:2px;}
   .month-total{font-family:'Fraunces',serif; font-size:22px; font-weight:600; color:var(--pine); margin-bottom:2px;}
   .catbar-row{display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:13px;}
   .catbar-label{width:110px; flex-shrink:0; color:var(--ink-soft);}
@@ -448,7 +455,10 @@
     <!-- HOGAR -->
     <section class="section" id="sec-hogar">
       <div class="page-head"><h1>Hogar</h1><p>¿Dónde están guardadas las cosas? Busca y encuentra todo.</p></div>
-      <input type="text" class="search-box" id="h-search" placeholder="Buscar... ej. 'ropa niño', 'campamento'">
+      <div class="search-wrap">
+        <input type="text" class="search-box" id="h-search" placeholder="Buscar... ej. 'ropa niño', 'campamento'">
+        <button type="button" class="search-clear" id="h-search-clear" title="Limpiar búsqueda">✕</button>
+      </div>
       <div id="list-hogar"></div>
       <details class="collapse-card" style="margin-top:8px;">
         <summary class="btn secondary" style="display:inline-block;">+ Agregar al inventario</summary>
@@ -763,6 +773,7 @@ window.editNickname = async function(id){
   if(nuevo===null) return;
   const trimmed = nuevo.trim();
   if(!trimmed) return;
+  if(!confirm(`¿Cambiar el apodo a "${trimmed}"?`)) return;
   await sb.from('familia').update({apodo:trimmed}).eq('id', id);
   f.apodo = trimmed;
   renderFamilia(); renderDocs();
@@ -1002,6 +1013,11 @@ document.getElementById('form-hogar').addEventListener('submit', async e=>{
   renderHogar(); renderDashboard();
 });
 document.getElementById('h-search').addEventListener('input', renderHogar);
+document.getElementById('h-search-clear').addEventListener('click', ()=>{
+  document.getElementById('h-search').value = '';
+  renderHogar();
+  document.getElementById('h-search').focus();
+});
 
 const stripAccents = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 function highlightMatch(text, query){
@@ -1021,15 +1037,23 @@ function highlightMatch(text, query){
   return result;
 }
 
-function hogarItemCard(h, highlightLocation, query){
+function contenidoList(text, query){
+  const lines = (text||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  if(lines.length===0) return '';
+  if(lines.length===1){
+    return `<div class="item-sub">${query ? highlightMatch(lines[0], query) : escapeHtml(lines[0])}</div>`;
+  }
+  return `<ol class="contenido-list">${lines.map(l=>`<li>${query ? highlightMatch(l, query) : escapeHtml(l)}</li>`).join('')}</ol>`;
+}
+
+function hogarItemCard(h, standalone, query){
   return `
     <div class="item">
       <div class="item-main">
-        ${highlightLocation && h.ubicacion ? `<div class="item-sub" style="font-weight:700; margin-bottom:2px;">📍 ${highlightMatch(h.ubicacion, query)}</div>` : ''}
-        <div class="item-title">${escapeHtml(h.nombre)}</div>
-        <div class="item-sub">${escapeHtml(h.contenido)}</div>
-        ${(!highlightLocation && h.ubicacion) ? `<div class="item-meta"><span class="tag">📍 ${escapeHtml(h.ubicacion)}</span></div>` : ''}
-        ${h.notas?`<div class="item-sub" style="margin-top:4px;">${escapeHtml(h.notas)}</div>`:''}
+        ${standalone ? `<div class="item-title">📍 ${escapeHtml(h.nombre)}</div>` : ''}
+        ${h.ubicacion ? `<div class="item-sub" style="font-weight:700; ${standalone?'margin-top:2px;':''}">${escapeHtml(h.ubicacion)}</div>` : ''}
+        ${contenidoList(h.contenido, query)}
+        ${h.notas?`<div class="item-sub" style="margin-top:4px; font-style:italic;">${escapeHtml(h.notas)}</div>`:''}
       </div>
       <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
         <button class="del-btn" onclick="openHogarEdit('${h.id}')" title="Editar">✎</button>
@@ -1041,6 +1065,7 @@ function hogarItemCard(h, highlightLocation, query){
 function renderHogar(){
   const list = document.getElementById('list-hogar');
   const q = document.getElementById('h-search').value.trim().toLowerCase();
+  document.getElementById('h-search-clear').style.display = q ? 'block' : 'none';
 
   if(DATA.hogar.length===0){ list.innerHTML = emptyState('Aún no has agregado nada al inventario del hogar.'); return; }
 
@@ -1062,7 +1087,7 @@ function renderHogar(){
   const sortedKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b));
   list.innerHTML = sortedKeys.map(cont=>`
     <details class="hogar-group">
-      <summary>${escapeHtml(cont)} <span class="count">${groups[cont].length} ${groups[cont].length===1?'registro':'registros'}</span></summary>
+      <summary>📍 ${escapeHtml(cont)} <span class="count">${groups[cont].length} ${groups[cont].length===1?'registro':'registros'}</span></summary>
       <div class="hogar-group-body">${groups[cont].map(h=>hogarItemCard(h, false)).join('')}</div>
     </details>`).join('');
 }
@@ -1081,6 +1106,7 @@ function closeHogarModal(){ document.getElementById('hogar-modal-overlay').style
 document.getElementById('hogar-modal-cancel').addEventListener('click', closeHogarModal);
 document.getElementById('hogar-modal-overlay').addEventListener('click', e=>{ if(e.target.id==='hogar-modal-overlay') closeHogarModal(); });
 document.getElementById('hogar-modal-save').addEventListener('click', async ()=>{
+  if(!confirm('¿Guardar estos cambios?')) return;
   const id = document.getElementById('hogar-modal-overlay').dataset.editId;
   const updates = {
     nombre: document.getElementById('hm-nombre').value,
@@ -1216,6 +1242,7 @@ function renderDashboard(){
 /* ---------- BORRAR (SUPABASE) ---------- */
 const TABLE_MAP = { gastos:'gastos', autos:'autos', documentos:'documentos', ejercicio:'ejercicio', alimentacion:'alimentacion', hogar:'hogar' };
 window.delItem = async function(key, id){
+  if(!confirm('¿Seguro que quieres borrar esto? No se puede deshacer.')) return;
   const table = TABLE_MAP[key];
   const { error } = await sb.from(table).delete().eq('id', id);
   if(error){ alert('Error al borrar: ' + error.message); return; }
