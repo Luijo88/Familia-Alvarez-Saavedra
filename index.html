@@ -352,6 +352,12 @@
       <div class="page-head"><h1>Documentos</h1><p>Fechas de vencimiento de pasaportes, identificaciones y más.</p></div>
 
       <div class="tabbar" id="docs-person-filter" style="flex-wrap:wrap; row-gap:6px;"></div>
+      <div class="form-row" style="grid-template-columns:1fr; margin-bottom:14px;">
+        <div>
+          <label>Buscar por tipo de documento</label>
+          <select id="docs-tipo-filter"><option value="Todos">Todos los tipos</option></select>
+        </div>
+      </div>
       <div id="list-docs"></div>
 
       <details class="collapse-card" style="margin-top:8px;">
@@ -367,7 +373,8 @@
             <div><label>Tipo</label>
               <select id="d-tipo">
                 <option>Pasaporte</option><option>Identificación / INE</option><option>Licencia de conducir</option>
-                <option>Visa</option><option>Seguro médico</option><option>Póliza de seguro</option><option>Otro</option>
+                <option>Visa</option><option>CURP</option><option>RFC</option><option>Acta de Nacimiento</option>
+                <option>Póliza de seguro</option><option>Otro</option>
               </select>
             </div>
             <div>
@@ -574,7 +581,8 @@
           <div><label>Tipo</label>
             <select id="dm-tipo">
               <option>Pasaporte</option><option>Identificación / INE</option><option>Licencia de conducir</option>
-              <option>Visa</option><option>Seguro médico</option><option>Póliza de seguro</option><option>Otro</option>
+              <option>Visa</option><option>CURP</option><option>RFC</option><option>Acta de Nacimiento</option>
+              <option>Póliza de seguro</option><option>Otro</option>
             </select>
           </div>
           <div>
@@ -901,6 +909,8 @@ document.querySelectorAll('.tabbar .tabbtn').forEach(btn=>{
 
 /* ---------- FAMILIA ---------- */
 let docsFilterPerson = null;
+let docsFilterTipo = 'Todos';
+document.getElementById('docs-tipo-filter').addEventListener('change', e=>{ docsFilterTipo = e.target.value; renderDocs(); });
 
 document.getElementById('familia-add-btn').addEventListener('click', addFamilyMember);
 document.getElementById('familia-nueva').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addFamilyMember(); } });
@@ -1134,13 +1144,26 @@ function docItemCard(d){
     </div>`;
 }
 
+const TIPO_DOCS_BASE = ['Pasaporte','Identificación / INE','Licencia de conducir','Visa','CURP','RFC','Acta de Nacimiento','Póliza de seguro','Otro'];
+function populateTipoFilter(){
+  const sel = document.getElementById('docs-tipo-filter');
+  const current = sel.value;
+  const extras = [...new Set(DATA.documentos.map(d=>d.tipo).filter(t=>t && !TIPO_DOCS_BASE.includes(t)))];
+  const all = [...TIPO_DOCS_BASE, ...extras];
+  sel.innerHTML = '<option value="Todos">Todos los tipos</option>' + all.map(t=>`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  sel.value = all.includes(current) ? current : 'Todos';
+}
+
 function renderDocs(){
+  populateTipoFilter();
   const list = document.getElementById('list-docs');
   if(DATA.documentos.length===0){ list.innerHTML = emptyState('Aún no hay documentos registrados.'); return; }
-  if(!docsFilterPerson){ list.innerHTML = emptyState('Selecciona un integrante arriba para ver sus documentos.'); return; }
+  const hasFilter = docsFilterPerson || docsFilterTipo !== 'Todos';
+  if(!hasFilter){ list.innerHTML = emptyState('Selecciona un integrante, o busca por tipo, para ver documentos.'); return; }
   let items = [...DATA.documentos];
-  if(docsFilterPerson !== 'Todos') items = items.filter(d=>d.persona===docsFilterPerson);
-  if(items.length===0){ list.innerHTML = emptyState('Sin documentos para esta persona todavía.'); return; }
+  if(docsFilterPerson && docsFilterPerson !== 'Todos') items = items.filter(d=>d.persona===docsFilterPerson);
+  if(docsFilterTipo !== 'Todos') items = items.filter(d=>d.tipo===docsFilterTipo);
+  if(items.length===0){ list.innerHTML = emptyState('Nada coincide con este filtro todavía.'); return; }
   const sorted = items.sort((a,b)=> (a.fecha||'9999').localeCompare(b.fecha||'9999'));
   list.innerHTML = sorted.map(docItemCard).join('');
 }
@@ -1384,7 +1407,14 @@ window.openDocEdit = function(id){
   document.getElementById('doc-modal-overlay').dataset.editId = id;
   document.getElementById('dm-nombre').value = d.nombre || '';
   document.getElementById('dm-persona').value = d.persona || '';
-  document.getElementById('dm-tipo').value = d.tipo || 'Otro';
+  const tipoSel = document.getElementById('dm-tipo');
+  const tipoOptions = Array.from(tipoSel.options).map(o=>o.value);
+  if(d.tipo && !tipoOptions.includes(d.tipo)){
+    const opt = document.createElement('option');
+    opt.value = d.tipo; opt.textContent = d.tipo + ' (anterior)';
+    tipoSel.insertBefore(opt, tipoSel.firstChild);
+  }
+  tipoSel.value = d.tipo || 'Otro';
   document.getElementById('dm-fecha').value = d.fecha || '';
   document.getElementById('dm-fecha').disabled = !!d.sin_vencimiento;
   document.getElementById('dm-sin-vencimiento').checked = !!d.sin_vencimiento;
