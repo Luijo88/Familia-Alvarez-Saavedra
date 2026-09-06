@@ -325,6 +325,7 @@
             <div><label>Kilometraje actual (opcional)</label><input type="text" id="a-km" placeholder="Ej. 45,000 km"></div>
           </div>
           <div><label>Notas</label><textarea id="a-notas" placeholder="Ej. Taller de confianza, llantas, etc."></textarea></div>
+          <div><label>Adjuntar archivo (PDF o foto, máx. 50 MB)</label><input type="file" id="a-archivo" accept=".pdf,image/*"></div>
           <button class="btn" type="submit">Agregar auto</button>
         </form>
       </details>
@@ -359,6 +360,7 @@
           <div><label>Fecha de vencimiento</label><input type="date" id="d-fecha" required></div>
         </div>
         <div><label>Notas</label><input type="text" id="d-notas" placeholder="Ej. Renovar en línea"></div>
+        <div><label>Adjuntar archivo (PDF o foto, máx. 50 MB)</label><input type="file" id="d-archivo" accept=".pdf,image/*"></div>
         <button class="btn" type="submit">Agregar documento</button>
       </form>
       <div class="tabbar" id="docs-person-filter" style="flex-wrap:wrap; row-gap:6px;"></div>
@@ -527,6 +529,35 @@ function escapeHtml(s){
 function emptyState(msg){ return `<div class="empty-state"><div class="display">Nada por aquí todavía</div><div>${msg}</div></div>`; }
 
 let DATA = { gastos:[], autos:[], documentos:[], ejercicio:[], alimentacion:[], hogar:[], familia:[], ejercicioCal:{} };
+
+/* ---------- ARCHIVOS ADJUNTOS (Supabase Storage) ---------- */
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB
+async function uploadAdjunto(file, folder){
+  if(!file) return null;
+  if(file.size > MAX_FILE_BYTES){
+    alert('El archivo pesa más de 50 MB, el límite del plan. Intenta con uno más ligero.');
+    return null;
+  }
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const path = `${folder}/${crypto.randomUUID()}-${safeName}`;
+  const { error } = await sb.storage.from('adjuntos').upload(path, file);
+  if(error){ alert('Error al subir el archivo: ' + error.message); return null; }
+  return { archivo_path: path, archivo_nombre: file.name };
+}
+window.verAdjunto = async function(path){
+  const { data, error } = await sb.storage.from('adjuntos').createSignedUrl(path, 60);
+  if(error){ alert('Error al abrir el archivo: ' + error.message); return; }
+  window.open(data.signedUrl, '_blank');
+};
+async function borrarAdjunto(path){
+  if(!path) return;
+  await sb.storage.from('adjuntos').remove([path]);
+}
+function adjuntoRow(h){
+  if(!h.archivo_path) return '';
+  return `<div class="item-meta"><button class="tag" style="cursor:pointer; border:1px solid var(--pine); color:var(--pine); background:none;" onclick="verAdjunto('${h.archivo_path}')">📎 ${escapeHtml(h.archivo_nombre||'Ver archivo')}</button></div>`;
+}
+
 
 /* ---------- AUTENTICACIÓN ---------- */
 let authMode = 'login';
@@ -864,13 +895,19 @@ function renderGastos(){
 /* ---------- AUTOS ---------- */
 document.getElementById('form-autos').addEventListener('submit', async e=>{
   e.preventDefault();
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const file = document.getElementById('a-archivo').files[0];
+  const uploaded = file ? await uploadAdjunto(file, 'autos') : null;
   const row = {
     nombre: document.getElementById('a-nombre').value, placas: document.getElementById('a-placas').value || null,
     aceite: document.getElementById('a-aceite').value || null, verificacion: document.getElementById('a-verif').value || null,
     seguro: document.getElementById('a-seguro').value || null, km: document.getElementById('a-km').value || null,
-    notas: document.getElementById('a-notas').value || null
+    notas: document.getElementById('a-notas').value || null,
+    archivo_path: uploaded ? uploaded.archivo_path : null, archivo_nombre: uploaded ? uploaded.archivo_nombre : null
   };
   const { data, error } = await sb.from('autos').insert(row).select();
+  btn.disabled = false; btn.textContent = 'Agregar auto';
   if(error){ alert('Error al guardar: ' + error.message); return; }
   DATA.autos.push(data[0]);
   e.target.reset();
@@ -901,6 +938,7 @@ function renderAutos(){
           ${dateBadge(a.seguro,'Seguro')}
         </div>
         ${a.notas?`<div class="item-sub" style="margin-top:6px;">${escapeHtml(a.notas)}</div>`:''}
+        ${adjuntoRow(a)}
       </div>
       <button class="del-btn" onclick="delItem('autos','${a.id}')">✕</button>
     </div>`).join('');
@@ -909,12 +947,18 @@ function renderAutos(){
 /* ---------- DOCUMENTOS ---------- */
 document.getElementById('form-docs').addEventListener('submit', async e=>{
   e.preventDefault();
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const file = document.getElementById('d-archivo').files[0];
+  const uploaded = file ? await uploadAdjunto(file, 'documentos') : null;
   const row = {
     nombre: document.getElementById('d-nombre').value, tipo: document.getElementById('d-tipo').value,
     persona: document.getElementById('d-persona').value || null,
-    fecha: document.getElementById('d-fecha').value, notas: document.getElementById('d-notas').value || null
+    fecha: document.getElementById('d-fecha').value, notas: document.getElementById('d-notas').value || null,
+    archivo_path: uploaded ? uploaded.archivo_path : null, archivo_nombre: uploaded ? uploaded.archivo_nombre : null
   };
   const { data, error } = await sb.from('documentos').insert(row).select();
+  btn.disabled = false; btn.textContent = 'Agregar documento';
   if(error){ alert('Error al guardar: ' + error.message); return; }
   DATA.documentos.push(data[0]);
   e.target.reset();
@@ -934,6 +978,7 @@ function renderDocs(){
         <div class="item-title">${escapeHtml(d.nombre)}</div>
         <div class="item-sub">${escapeHtml(d.tipo)}${d.notas?' · '+escapeHtml(d.notas):''}</div>
         <div class="item-meta">${d.persona?`<span class="tag">👤 ${escapeHtml(getNickname(d.persona))}</span>`:''}${dateBadge(d.fecha,'Vence')}</div>
+        ${adjuntoRow(d)}
       </div>
       <button class="del-btn" onclick="delItem('documentos','${d.id}')">✕</button>
     </div>`).join('');
@@ -1244,8 +1289,10 @@ const TABLE_MAP = { gastos:'gastos', autos:'autos', documentos:'documentos', eje
 window.delItem = async function(key, id){
   if(!confirm('¿Seguro que quieres borrar esto? No se puede deshacer.')) return;
   const table = TABLE_MAP[key];
+  const item = DATA[key].find(x=>x.id===id);
   const { error } = await sb.from(table).delete().eq('id', id);
   if(error){ alert('Error al borrar: ' + error.message); return; }
+  if(item && item.archivo_path) await borrarAdjunto(item.archivo_path);
   DATA[key] = DATA[key].filter(x=>x.id!==id);
   renderAll();
 };
