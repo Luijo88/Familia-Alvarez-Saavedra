@@ -118,6 +118,15 @@
   .btn.secondary{background:transparent; color:var(--ink-soft); border:1px solid var(--line);}
   .btn:disabled{opacity:.6; cursor:default;}
 
+  .dropzone{
+    border:2px dashed var(--line); border-radius:12px; padding:18px 14px; text-align:center; cursor:pointer;
+    display:flex; flex-direction:column; gap:4px; align-items:center; transition:border-color .15s, background .15s;
+  }
+  .dropzone:hover, .dropzone.dragover{border-color:var(--pine); background:var(--pine-light);}
+  .dropzone-text{font-size:13px; color:var(--ink-soft);}
+  .dropzone-filename{font-size:13px; font-weight:700; color:var(--pine); display:none;}
+  .dropzone-filename.show{display:block;}
+
   /* List items */
   .item{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; display:flex; justify-content:space-between; gap:12px; align-items:flex-start;}
   .item-main{flex:1; min-width:0;}
@@ -260,7 +269,7 @@
         <div id="alerts-autos"></div>
       </div>
       <div class="alert-box">
-        <div class="alert-head">📄 Documentos — próximos vencimientos</div>
+        <div class="alert-head">📄 Documentos — vencen en menos de 9 meses</div>
         <div id="alerts-docs"></div>
       </div>
 
@@ -325,7 +334,14 @@
             <div><label>Kilometraje actual (opcional)</label><input type="text" id="a-km" placeholder="Ej. 45,000 km"></div>
           </div>
           <div><label>Notas</label><textarea id="a-notas" placeholder="Ej. Taller de confianza, llantas, etc."></textarea></div>
-          <div><label>Adjuntar archivo (PDF o foto, máx. 50 MB)</label><input type="file" id="a-archivo" accept=".pdf,image/*"></div>
+          <div>
+            <label>Adjuntar archivo (PDF o foto, máx. 50 MB)</label>
+            <div class="dropzone" id="a-dropzone">
+              <span class="dropzone-text">Arrastra un archivo aquí o haz clic para elegirlo</span>
+              <span class="dropzone-filename" id="a-archivo-nombre"></span>
+              <input type="file" id="a-archivo" accept=".pdf,image/*" style="display:none;">
+            </div>
+          </div>
           <button class="btn" type="submit">Agregar auto</button>
         </form>
       </details>
@@ -334,37 +350,58 @@
     <!-- DOCUMENTOS -->
     <section class="section" id="sec-documentos">
       <div class="page-head"><h1>Documentos</h1><p>Fechas de vencimiento de pasaportes, identificaciones y más.</p></div>
-      <div class="card" id="familia-card" style="margin-bottom:22px;">
-        <div class="tile-label" style="color:var(--docs); margin-bottom:10px;">Integrantes de la familia</div>
-        <div id="familia-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
-        <div class="form-row" style="grid-template-columns:1fr 1fr auto;">
-          <input type="text" id="familia-nueva" placeholder="Nombre completo">
-          <input type="text" id="familia-apodo" placeholder="Apodo (opcional)">
-          <button class="btn" type="button" id="familia-add-btn">Agregar</button>
-        </div>
-      </div>
-      <form class="form card" id="form-docs" style="margin-bottom:22px;">
-        <div class="form-row">
-          <div><label>Nombre del documento</label><input type="text" id="d-nombre" placeholder="Ej. Pasaporte" required></div>
-          <div><label>Persona</label>
-            <select id="d-persona"></select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div><label>Tipo</label>
-            <select id="d-tipo">
-              <option>Pasaporte</option><option>Identificación / INE</option><option>Licencia de conducir</option>
-              <option>Visa</option><option>Seguro médico</option><option>Póliza de seguro</option><option>Otro</option>
-            </select>
-          </div>
-          <div><label>Fecha de vencimiento</label><input type="date" id="d-fecha" required></div>
-        </div>
-        <div><label>Notas</label><input type="text" id="d-notas" placeholder="Ej. Renovar en línea"></div>
-        <div><label>Adjuntar archivo (PDF o foto, máx. 50 MB)</label><input type="file" id="d-archivo" accept=".pdf,image/*"></div>
-        <button class="btn" type="submit">Agregar documento</button>
-      </form>
+
       <div class="tabbar" id="docs-person-filter" style="flex-wrap:wrap; row-gap:6px;"></div>
       <div id="list-docs"></div>
+
+      <details class="collapse-card" style="margin-top:8px;">
+        <summary class="btn secondary" style="display:inline-block;">+ Agregar documento</summary>
+        <form class="form card" id="form-docs" style="margin-top:14px;">
+          <div class="form-row">
+            <div><label>Nombre del documento</label><input type="text" id="d-nombre" placeholder="Ej. Pasaporte" required></div>
+            <div><label>Persona</label>
+              <select id="d-persona"></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div><label>Tipo</label>
+              <select id="d-tipo">
+                <option>Pasaporte</option><option>Identificación / INE</option><option>Licencia de conducir</option>
+                <option>Visa</option><option>Seguro médico</option><option>Póliza de seguro</option><option>Otro</option>
+              </select>
+            </div>
+            <div>
+              <label>Fecha de vencimiento</label>
+              <input type="date" id="d-fecha">
+              <label style="display:flex; align-items:center; gap:6px; margin-top:6px; font-weight:400;">
+                <input type="checkbox" id="d-sin-vencimiento" style="width:auto;"> Este documento no vence
+              </label>
+            </div>
+          </div>
+          <div><label>Notas</label><input type="text" id="d-notas" placeholder="Ej. Renovar en línea"></div>
+          <div>
+            <label>Adjuntar archivo (PDF o foto, máx. 50 MB)</label>
+            <div class="dropzone" id="d-dropzone">
+              <span class="dropzone-text">Arrastra un archivo aquí o haz clic para elegirlo</span>
+              <span class="dropzone-filename" id="d-archivo-nombre"></span>
+              <input type="file" id="d-archivo" accept=".pdf,image/*" style="display:none;">
+            </div>
+          </div>
+          <button class="btn" type="submit">Agregar documento</button>
+        </form>
+      </details>
+
+      <details class="collapse-card" style="margin-top:8px;">
+        <summary class="btn secondary" style="display:inline-block;">Integrantes de la familia</summary>
+        <div class="card" id="familia-card" style="margin-top:14px;">
+          <div id="familia-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+          <div class="form-row" style="grid-template-columns:1fr 1fr auto;">
+            <input type="text" id="familia-nueva" placeholder="Nombre completo">
+            <input type="text" id="familia-apodo" placeholder="Apodo (opcional)">
+            <button class="btn" type="button" id="familia-add-btn">Agregar</button>
+          </div>
+        </div>
+      </details>
     </section>
 
     <!-- SALUD -->
@@ -492,6 +529,77 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal editar auto -->
+    <div id="auto-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(30,35,31,0.4); z-index:50; align-items:center; justify-content:center; padding:20px;">
+      <div class="card" style="max-width:420px; width:100%; max-height:90vh; overflow-y:auto;">
+        <div class="display" style="font-size:18px; font-weight:600; margin-bottom:14px;">Editar auto</div>
+        <div class="form-row">
+          <div><label>Nombre del auto</label><input type="text" id="am-nombre"></div>
+          <div><label>Placas</label><input type="text" id="am-placas"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Próximo cambio de aceite</label><input type="date" id="am-aceite"></div>
+          <div><label>Próxima verificación</label><input type="date" id="am-verif"></div>
+        </div>
+        <div class="form-row">
+          <div><label>Vencimiento del seguro</label><input type="date" id="am-seguro"></div>
+          <div><label>Kilometraje actual</label><input type="text" id="am-km"></div>
+        </div>
+        <div><label>Notas</label><textarea id="am-notas"></textarea></div>
+        <div>
+          <label>Reemplazar archivo (opcional)</label>
+          <div class="dropzone" id="am-dropzone">
+            <span class="dropzone-text">Arrastra un archivo aquí o haz clic para elegirlo</span>
+            <span class="dropzone-filename" id="am-archivo-nombre"></span>
+            <input type="file" id="am-archivo" accept=".pdf,image/*" style="display:none;">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <button class="btn" id="auto-modal-save" type="button" style="flex:1;">Guardar cambios</button>
+          <button class="btn secondary" id="auto-modal-cancel" type="button">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal editar documento -->
+    <div id="doc-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(30,35,31,0.4); z-index:50; align-items:center; justify-content:center; padding:20px;">
+      <div class="card" style="max-width:420px; width:100%; max-height:90vh; overflow-y:auto;">
+        <div class="display" style="font-size:18px; font-weight:600; margin-bottom:14px;">Editar documento</div>
+        <div class="form-row">
+          <div><label>Nombre del documento</label><input type="text" id="dm-nombre"></div>
+          <div><label>Persona</label><select id="dm-persona"></select></div>
+        </div>
+        <div class="form-row">
+          <div><label>Tipo</label>
+            <select id="dm-tipo">
+              <option>Pasaporte</option><option>Identificación / INE</option><option>Licencia de conducir</option>
+              <option>Visa</option><option>Seguro médico</option><option>Póliza de seguro</option><option>Otro</option>
+            </select>
+          </div>
+          <div>
+            <label>Fecha de vencimiento</label>
+            <input type="date" id="dm-fecha">
+            <label style="display:flex; align-items:center; gap:6px; margin-top:6px; font-weight:400;">
+              <input type="checkbox" id="dm-sin-vencimiento" style="width:auto;"> Este documento no vence
+            </label>
+          </div>
+        </div>
+        <div><label>Notas</label><input type="text" id="dm-notas"></div>
+        <div>
+          <label>Reemplazar archivo (opcional)</label>
+          <div class="dropzone" id="dm-dropzone">
+            <span class="dropzone-text">Arrastra un archivo aquí o haz clic para elegirlo</span>
+            <span class="dropzone-filename" id="dm-archivo-nombre"></span>
+            <input type="file" id="dm-archivo" accept=".pdf,image/*" style="display:none;">
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <button class="btn" id="doc-modal-save" type="button" style="flex:1;">Guardar cambios</button>
+          <button class="btn secondary" id="doc-modal-cancel" type="button">Cancelar</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <nav id="bottomnav">
@@ -558,6 +666,27 @@ function adjuntoRow(h){
   return `<div class="item-meta"><button class="tag" style="cursor:pointer; border:1px solid var(--pine); color:var(--pine); background:none;" onclick="verAdjunto('${h.archivo_path}')">📎 ${escapeHtml(h.archivo_nombre||'Ver archivo')}</button></div>`;
 }
 
+function setupDropzone(zoneId, inputId, nameId){
+  const zone = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  const nameEl = document.getElementById(nameId);
+  const showName = () => {
+    if(input.files[0]){ nameEl.textContent = '📎 ' + input.files[0].name; nameEl.classList.add('show'); }
+    else { nameEl.textContent = ''; nameEl.classList.remove('show'); }
+  };
+  zone.addEventListener('click', ()=> input.click());
+  input.addEventListener('change', showName);
+  zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', ()=> zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e=>{
+    e.preventDefault(); zone.classList.remove('dragover');
+    if(e.dataTransfer.files[0]){ input.files = e.dataTransfer.files; showName(); }
+  });
+}
+setupDropzone('d-dropzone', 'd-archivo', 'd-archivo-nombre');
+setupDropzone('a-dropzone', 'a-archivo', 'a-archivo-nombre');
+setupDropzone('am-dropzone', 'am-archivo', 'am-archivo-nombre');
+setupDropzone('dm-dropzone', 'dm-archivo', 'dm-archivo-nombre');
 
 /* ---------- AUTENTICACIÓN ---------- */
 let authMode = 'login';
@@ -771,7 +900,7 @@ document.querySelectorAll('.tabbar .tabbtn').forEach(btn=>{
 });
 
 /* ---------- FAMILIA ---------- */
-let docsFilterPerson = 'Todos';
+let docsFilterPerson = null;
 
 document.getElementById('familia-add-btn').addEventListener('click', addFamilyMember);
 document.getElementById('familia-nueva').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addFamilyMember(); } });
@@ -829,11 +958,17 @@ function renderFamilia(){
   sel.innerHTML = DATA.familia.map(f=>`<option value="${escapeHtml(f.nombre_completo)}">${escapeHtml(f.apodo || f.nombre_completo.split(' ')[0])}</option>`).join('');
   if(DATA.familia.some(f=>f.nombre_completo===current)) sel.value = current;
 
+  const selEdit = document.getElementById('dm-persona');
+  if(selEdit) selEdit.innerHTML = sel.innerHTML;
+
   const filterEl = document.getElementById('docs-person-filter');
   const options = [{nombre_completo:'Todos', apodo:'Todos'}, ...DATA.familia];
   filterEl.innerHTML = options.map(f=>`<button class="tabbtn ${docsFilterPerson===f.nombre_completo?'active':''}" data-person="${escapeHtml(f.nombre_completo)}">${escapeHtml(f.apodo)}</button>`).join('');
   filterEl.querySelectorAll('.tabbtn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{ docsFilterPerson = btn.dataset.person; renderFamilia(); renderDocs(); });
+    btn.addEventListener('click', ()=>{
+      docsFilterPerson = (docsFilterPerson===btn.dataset.person) ? null : btn.dataset.person;
+      renderFamilia(); renderDocs();
+    });
   });
 }
 
@@ -915,12 +1050,13 @@ document.getElementById('form-autos').addEventListener('submit', async e=>{
   renderAutos(); renderDashboard();
 });
 
-function dateBadge(dateStr, label){
+function dateBadge(dateStr, label, warnDays){
   if(!dateStr) return '';
+  warnDays = warnDays || 30;
   const d = daysUntil(dateStr);
   let extra='';
   if(d < 0){ extra='style="background:#FBEAE8; color:var(--danger); border-color:#FBEAE8;"'; }
-  else if(d <= 30){ extra='style="background:#FBF3E1; color:var(--warn); border-color:#FBF3E1;"'; }
+  else if(d <= warnDays){ extra='style="background:#FBF3E1; color:var(--warn); border-color:#FBF3E1;"'; }
   return `<span class="tag" ${extra}>${label}: ${fmtDate(dateStr)}${d<0?' (vencido)':''}</span>`;
 }
 
@@ -940,13 +1076,26 @@ function renderAutos(){
         ${a.notas?`<div class="item-sub" style="margin-top:6px;">${escapeHtml(a.notas)}</div>`:''}
         ${adjuntoRow(a)}
       </div>
-      <button class="del-btn" onclick="delItem('autos','${a.id}')">✕</button>
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+        <button class="del-btn" onclick="openAutoEdit('${a.id}')" title="Editar">✎</button>
+        <button class="del-btn" onclick="delItem('autos','${a.id}')" title="Borrar">✕</button>
+      </div>
     </div>`).join('');
 }
 
 /* ---------- DOCUMENTOS ---------- */
+const NUEVE_MESES_DIAS = 274; // ~9 meses
+
+document.getElementById('d-sin-vencimiento').addEventListener('change', e=>{
+  document.getElementById('d-fecha').disabled = e.target.checked;
+  if(e.target.checked) document.getElementById('d-fecha').value = '';
+});
+
 document.getElementById('form-docs').addEventListener('submit', async e=>{
   e.preventDefault();
+  const sinVencimiento = document.getElementById('d-sin-vencimiento').checked;
+  const fechaVal = document.getElementById('d-fecha').value;
+  if(!sinVencimiento && !fechaVal){ alert('Ingresa una fecha de vencimiento, o marca "Este documento no vence".'); return; }
   const btn = e.target.querySelector('button[type=submit]');
   btn.disabled = true; btn.textContent = 'Guardando...';
   const file = document.getElementById('d-archivo').files[0];
@@ -954,7 +1103,8 @@ document.getElementById('form-docs').addEventListener('submit', async e=>{
   const row = {
     nombre: document.getElementById('d-nombre').value, tipo: document.getElementById('d-tipo').value,
     persona: document.getElementById('d-persona').value || null,
-    fecha: document.getElementById('d-fecha').value, notas: document.getElementById('d-notas').value || null,
+    fecha: sinVencimiento ? null : fechaVal, sin_vencimiento: sinVencimiento,
+    notas: document.getElementById('d-notas').value || null,
     archivo_path: uploaded ? uploaded.archivo_path : null, archivo_nombre: uploaded ? uploaded.archivo_nombre : null
   };
   const { data, error } = await sb.from('documentos').insert(row).select();
@@ -962,26 +1112,37 @@ document.getElementById('form-docs').addEventListener('submit', async e=>{
   if(error){ alert('Error al guardar: ' + error.message); return; }
   DATA.documentos.push(data[0]);
   e.target.reset();
+  document.getElementById('d-fecha').disabled = false;
+  document.getElementById('d-archivo-nombre').classList.remove('show');
+  e.target.closest('details').open = false;
   renderDocs(); renderDashboard();
 });
 
-function renderDocs(){
-  const list = document.getElementById('list-docs');
-  if(DATA.documentos.length===0){ list.innerHTML = emptyState('Aún no hay documentos registrados.'); return; }
-  let items = [...DATA.documentos];
-  if(docsFilterPerson !== 'Todos') items = items.filter(d=>d.persona===docsFilterPerson);
-  if(items.length===0){ list.innerHTML = emptyState('Sin documentos para esta persona todavía.'); return; }
-  const sorted = items.sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  list.innerHTML = sorted.map(d=>`
+function docItemCard(d){
+  return `
     <div class="item">
       <div class="item-main">
         <div class="item-title">${escapeHtml(d.nombre)}</div>
         <div class="item-sub">${escapeHtml(d.tipo)}${d.notas?' · '+escapeHtml(d.notas):''}</div>
-        <div class="item-meta">${d.persona?`<span class="tag">👤 ${escapeHtml(getNickname(d.persona))}</span>`:''}${dateBadge(d.fecha,'Vence')}</div>
+        <div class="item-meta">${d.persona?`<span class="tag">👤 ${escapeHtml(getNickname(d.persona))}</span>`:''}${d.sin_vencimiento ? '<span class="tag">No vence</span>' : dateBadge(d.fecha,'Vence', NUEVE_MESES_DIAS)}</div>
         ${adjuntoRow(d)}
       </div>
-      <button class="del-btn" onclick="delItem('documentos','${d.id}')">✕</button>
-    </div>`).join('');
+      <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+        <button class="del-btn" onclick="openDocEdit('${d.id}')" title="Editar">✎</button>
+        <button class="del-btn" onclick="delItem('documentos','${d.id}')" title="Borrar">✕</button>
+      </div>
+    </div>`;
+}
+
+function renderDocs(){
+  const list = document.getElementById('list-docs');
+  if(DATA.documentos.length===0){ list.innerHTML = emptyState('Aún no hay documentos registrados.'); return; }
+  if(!docsFilterPerson){ list.innerHTML = emptyState('Selecciona un integrante arriba para ver sus documentos.'); return; }
+  let items = [...DATA.documentos];
+  if(docsFilterPerson !== 'Todos') items = items.filter(d=>d.persona===docsFilterPerson);
+  if(items.length===0){ list.innerHTML = emptyState('Sin documentos para esta persona todavía.'); return; }
+  const sorted = items.sort((a,b)=> (a.fecha||'9999').localeCompare(b.fecha||'9999'));
+  list.innerHTML = sorted.map(docItemCard).join('');
 }
 
 /* ---------- SALUD: EJERCICIO (historial) ---------- */
@@ -1167,6 +1328,111 @@ document.getElementById('hogar-modal-save').addEventListener('click', async ()=>
   renderHogar();
 });
 
+/* ---------- EDITAR AUTO ---------- */
+window.openAutoEdit = function(id){
+  const a = DATA.autos.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('auto-modal-overlay').dataset.editId = id;
+  document.getElementById('am-nombre').value = a.nombre || '';
+  document.getElementById('am-placas').value = a.placas || '';
+  document.getElementById('am-aceite').value = a.aceite || '';
+  document.getElementById('am-verif').value = a.verificacion || '';
+  document.getElementById('am-seguro').value = a.seguro || '';
+  document.getElementById('am-km').value = a.km || '';
+  document.getElementById('am-notas').value = a.notas || '';
+  document.getElementById('am-archivo').value = '';
+  document.getElementById('am-archivo-nombre').textContent = a.archivo_nombre ? '📎 Actual: ' + a.archivo_nombre : '';
+  document.getElementById('am-archivo-nombre').classList.toggle('show', !!a.archivo_nombre);
+  document.getElementById('auto-modal-overlay').style.display = 'flex';
+};
+function closeAutoModal(){ document.getElementById('auto-modal-overlay').style.display = 'none'; }
+document.getElementById('auto-modal-cancel').addEventListener('click', closeAutoModal);
+document.getElementById('auto-modal-overlay').addEventListener('click', e=>{ if(e.target.id==='auto-modal-overlay') closeAutoModal(); });
+document.getElementById('auto-modal-save').addEventListener('click', async ()=>{
+  if(!confirm('¿Guardar estos cambios?')) return;
+  const id = document.getElementById('auto-modal-overlay').dataset.editId;
+  const a = DATA.autos.find(x=>x.id===id);
+  const btn = document.getElementById('auto-modal-save');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const file = document.getElementById('am-archivo').files[0];
+  let archivo_path = a.archivo_path, archivo_nombre = a.archivo_nombre;
+  if(file){
+    const uploaded = await uploadAdjunto(file, 'autos');
+    if(uploaded){
+      if(a.archivo_path) await borrarAdjunto(a.archivo_path);
+      archivo_path = uploaded.archivo_path; archivo_nombre = uploaded.archivo_nombre;
+    }
+  }
+  const updates = {
+    nombre: document.getElementById('am-nombre').value, placas: document.getElementById('am-placas').value || null,
+    aceite: document.getElementById('am-aceite').value || null, verificacion: document.getElementById('am-verif').value || null,
+    seguro: document.getElementById('am-seguro').value || null, km: document.getElementById('am-km').value || null,
+    notas: document.getElementById('am-notas').value || null, archivo_path, archivo_nombre
+  };
+  const { error } = await sb.from('autos').update(updates).eq('id', id);
+  btn.disabled = false; btn.textContent = 'Guardar cambios';
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  Object.assign(a, updates);
+  closeAutoModal();
+  renderAutos(); renderDashboard();
+});
+
+/* ---------- EDITAR DOCUMENTO ---------- */
+window.openDocEdit = function(id){
+  const d = DATA.documentos.find(x=>x.id===id);
+  if(!d) return;
+  document.getElementById('doc-modal-overlay').dataset.editId = id;
+  document.getElementById('dm-nombre').value = d.nombre || '';
+  document.getElementById('dm-persona').value = d.persona || '';
+  document.getElementById('dm-tipo').value = d.tipo || 'Otro';
+  document.getElementById('dm-fecha').value = d.fecha || '';
+  document.getElementById('dm-fecha').disabled = !!d.sin_vencimiento;
+  document.getElementById('dm-sin-vencimiento').checked = !!d.sin_vencimiento;
+  document.getElementById('dm-notas').value = d.notas || '';
+  document.getElementById('dm-archivo').value = '';
+  document.getElementById('dm-archivo-nombre').textContent = d.archivo_nombre ? '📎 Actual: ' + d.archivo_nombre : '';
+  document.getElementById('dm-archivo-nombre').classList.toggle('show', !!d.archivo_nombre);
+  document.getElementById('doc-modal-overlay').style.display = 'flex';
+};
+document.getElementById('dm-sin-vencimiento').addEventListener('change', e=>{
+  document.getElementById('dm-fecha').disabled = e.target.checked;
+  if(e.target.checked) document.getElementById('dm-fecha').value = '';
+});
+function closeDocModal(){ document.getElementById('doc-modal-overlay').style.display = 'none'; }
+document.getElementById('doc-modal-cancel').addEventListener('click', closeDocModal);
+document.getElementById('doc-modal-overlay').addEventListener('click', e=>{ if(e.target.id==='doc-modal-overlay') closeDocModal(); });
+document.getElementById('doc-modal-save').addEventListener('click', async ()=>{
+  const sinVencimiento = document.getElementById('dm-sin-vencimiento').checked;
+  const fechaVal = document.getElementById('dm-fecha').value;
+  if(!sinVencimiento && !fechaVal){ alert('Ingresa una fecha de vencimiento, o marca "Este documento no vence".'); return; }
+  if(!confirm('¿Guardar estos cambios?')) return;
+  const id = document.getElementById('doc-modal-overlay').dataset.editId;
+  const d = DATA.documentos.find(x=>x.id===id);
+  const btn = document.getElementById('doc-modal-save');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const file = document.getElementById('dm-archivo').files[0];
+  let archivo_path = d.archivo_path, archivo_nombre = d.archivo_nombre;
+  if(file){
+    const uploaded = await uploadAdjunto(file, 'documentos');
+    if(uploaded){
+      if(d.archivo_path) await borrarAdjunto(d.archivo_path);
+      archivo_path = uploaded.archivo_path; archivo_nombre = uploaded.archivo_nombre;
+    }
+  }
+  const updates = {
+    nombre: document.getElementById('dm-nombre').value, tipo: document.getElementById('dm-tipo').value,
+    persona: document.getElementById('dm-persona').value || null,
+    fecha: sinVencimiento ? null : fechaVal, sin_vencimiento: sinVencimiento,
+    notas: document.getElementById('dm-notas').value || null, archivo_path, archivo_nombre
+  };
+  const { error } = await sb.from('documentos').update(updates).eq('id', id);
+  btn.disabled = false; btn.textContent = 'Guardar cambios';
+  if(error){ alert('Error al guardar: ' + error.message); return; }
+  Object.assign(d, updates);
+  closeDocModal();
+  renderDocs(); renderDashboard();
+});
+
 /* ---------- CALENDARIO DE EJERCICIO ---------- */
 let calViewDate = new Date(today.getFullYear(), today.getMonth(), 1);
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -1275,7 +1541,7 @@ function renderDashboard(){
       <span class="pill ${x.d<0?'overdue':'soon'}">${x.d<0? 'Vencido · '+fmtDate(x.date) : x.d===0?'Hoy':'En '+x.d+' días'}</span>
     </div>`).join('') : '<div class="empty-note">Todo en orden, sin vencimientos próximos. ✅</div>';
 
-  const docAlerts = DATA.documentos.map(d=>({...d, d: daysUntil(d.fecha)})).filter(d=>d.d!==null && d.d<=60).sort((a,b)=>a.d-b.d);
+  const docAlerts = DATA.documentos.map(d=>({...d, d: daysUntil(d.fecha)})).filter(d=>d.d!==null && d.d<=NUEVE_MESES_DIAS).sort((a,b)=>a.d-b.d);
   const docsEl = document.getElementById('alerts-docs');
   docsEl.innerHTML = docAlerts.length ? docAlerts.map(x=>`
     <div class="alert-row">
